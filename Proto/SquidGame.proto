@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "/Proto";
+option go_package = "./LAB2INF343/Proto";
 
 package Proto;
 
