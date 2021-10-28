@@ -23,4 +23,14 @@ func (s *server) Unirse(ctx context.Context, in *pb.SolictudUnirse) (*pb.Respues
 }
 
 func main() {
+	lis, err := net.Listen("tcp", nameNodeAddress+nameNodePort)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterLiderServer(s, &server{})
+	log.Printf("Juego Inicializado: escuchando en %v", lis.Addr())
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }
