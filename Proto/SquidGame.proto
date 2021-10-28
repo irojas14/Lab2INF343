@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "C:/Users/maxim/go/src/Lab2INF343/Proto";
+option go_package = "github.com/irojas14/Lab2INF343/Proto";
 
 package Proto;
 
