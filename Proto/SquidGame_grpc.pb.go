@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LiderClient interface {
-	Unirse(ctx context.Context, in *SolictudUnirse, opts ...grpc.CallOption) (*RespuestaUnirse, error)
+	Unirse(ctx context.Context, in *SolicitudUnirse, opts ...grpc.CallOption) (*RespuestaUnirse, error)
 	VerMonto(ctx context.Context, in *SolicitudVerMonto, opts ...grpc.CallOption) (*RespuestaVerMonto, error)
 	EnviarJugada(ctx context.Context, in *SolicitudEnviarJugada, opts ...grpc.CallOption) (*RespuestaEnviarJugada, error)
 }
@@ -31,7 +31,7 @@ func NewLiderClient(cc grpc.ClientConnInterface) LiderClient {
 	return &liderClient{cc}
 }
 
-func (c *liderClient) Unirse(ctx context.Context, in *SolictudUnirse, opts ...grpc.CallOption) (*RespuestaUnirse, error) {
+func (c *liderClient) Unirse(ctx context.Context, in *SolicitudUnirse, opts ...grpc.CallOption) (*RespuestaUnirse, error) {
 	out := new(RespuestaUnirse)
 	err := c.cc.Invoke(ctx, "/Proto.Lider/Unirse", in, out, opts...)
 	if err != nil {
@@ -62,7 +62,7 @@ func (c *liderClient) EnviarJugada(ctx context.Context, in *SolicitudEnviarJugad
 // All implementations must embed UnimplementedLiderServer
 // for forward compatibility
 type LiderServer interface {
-	Unirse(context.Context, *SolictudUnirse) (*RespuestaUnirse, error)
+	Unirse(context.Context, *SolicitudUnirse) (*RespuestaUnirse, error)
 	VerMonto(context.Context, *SolicitudVerMonto) (*RespuestaVerMonto, error)
 	EnviarJugada(context.Context, *SolicitudEnviarJugada) (*RespuestaEnviarJugada, error)
 	mustEmbedUnimplementedLiderServer()
@@ -72,7 +72,7 @@ type LiderServer interface {
 type UnimplementedLiderServer struct {
 }
 
-func (UnimplementedLiderServer) Unirse(context.Context, *SolictudUnirse) (*RespuestaUnirse, error) {
+func (UnimplementedLiderServer) Unirse(context.Context, *SolicitudUnirse) (*RespuestaUnirse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Unirse not implemented")
 }
 func (UnimplementedLiderServer) VerMonto(context.Context, *SolicitudVerMonto) (*RespuestaVerMonto, error) {
@@ -95,7 +95,7 @@ func RegisterLiderServer(s grpc.ServiceRegistrar, srv LiderServer) {
 }
 
 func _Lider_Unirse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SolictudUnirse)
+	in := new(SolicitudUnirse)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func _Lider_Unirse_Handler(srv interface{}, ctx context.Context, dec func(interf
 		FullMethod: "/Proto.Lider/Unirse",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LiderServer).Unirse(ctx, req.(*SolictudUnirse))
+		return srv.(LiderServer).Unirse(ctx, req.(*SolicitudUnirse))
 	}
 	return interceptor(ctx, in, info, handler)
 }
