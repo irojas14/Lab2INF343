@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "./LAB2INF343/Proto";
+option go_package = "https://github.com/irojas14/Lab2INF343/tree/Proto/Proto";
 
 package Proto;
 
