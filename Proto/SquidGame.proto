@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+option go_package = "/Proto";
+
+package Proto;
+
+// SERVICIOS
+
+service Lider {
+    rpc Unirse(SolictudUnirse) returns (RespuestaUnirse);
+    rpc VerMonto (SolicitudVerMonto) returns (RespuestaVerMonto);
+    rpc EnviarJugada (SolicitudEnviarJugada) returns (RespuestaEnviarJugada);
+}
+
+service Pozo {
+    rpc VerMonto (SolicitudVerMonto) returns (RespuestaVerMonto);
+}
+
+service NameNode {
+    rpc RegistrarJugadas (SolicitudRegistrarJugadas) returns (RespuestaRegistrarJugadas);
+    rpc DevolverJugadas (SolicitudDevolverRegistro) returns (RespuestaDevolverRegistro);
+}
+
+service DataNode {
+    rpc RegistrarJugadas (SolicitudRegistrarJugadas) returns (RespuestaRegistrarJugadas);
+    rpc DevolverJugadas (SolicitudDevolverRegistro) returns (RespuestaDevolverRegistro);
+}
+
+// MENSAJES
+
+// MENSAJES de Solicitud y Respuesta
+
+// Unirse
+
+message SolictudUnirse {
+    string saludo = 1;
+}
+
+message RespuestaUnirse {
+    string saludo = 1;
+    JugadorId numJugador = 2;
+}
+
+// Ver Monto
+
+message SolicitudVerMonto {
+}
+
+message RespuestaVerMonto {
+    float monto = 1;
+}
+
+// Enviar Jugada
+
+message SolicitudEnviarJugada {
+    JugadaRondaJugador jugadaInfo = 1;
+}
+
+message RespuestaEnviarJugada {
+    enum ESTADO {
+        ESTADO_MUERTO = 0;
+        ESTADO_VIVO = 1;
+        ESTADO_GANADOR = 2;
+    }
+    ESTADO estado = 1;
+}
+
+// Registrar Jugadas
+
+message SolicitudRegistrarJugadas {
+    JugadasJugador jugadasJugador = 1;
+}
+
+message RespuestaRegistrarJugadas {
+    JugadorId numJugador = 1;
+}
+
+// Devolver Jugadas
+
+message SolicitudDevolverRegistro {
+    JugadorId numJugador = 1;
+}
+
+message RespuestaDevolverRegistro {
+    JugadasJugador jugadasJugador = 1;
+}
+
+// MENSAJES Structs Auxiliares
+
+message JugadorId {
+    int32 val = 1;
+}
+
+message RondaId {
+    int32 val = 1;
+}
+
+message Jugada {
+    int32 val = 1;
+}
+
+message JugadaRondaJugador {
+    JugadorId numJugador = 1;
+    RondaId numRonda = 2;
+    Jugada jugada = 3;
+}
+
+message JugadasRonda {
+    RondaId numRonda = 1;
+    repeated Jugada jugadas = 2;
+}
+
+message JugadasJugador {
+    JugadorId numJugador = 1;
+    repeated JugadasRonda jugadasRonda = 2;
+}
+
+message JugadasRondaJugador {
+    JugadorId numJugador = 1;
+    JugadasRonda jugadasRonda = 2;
+}
+
+message Jugadas {
+    repeated JugadasJugador jugadasJugadores = 1;
+}
