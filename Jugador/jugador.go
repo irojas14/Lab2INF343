@@ -18,32 +18,32 @@ const (
 )
 
 func main() {
-	fmt.Print("COMENZANDO EL JUGADOR")
+	fmt.Println("COMENZANDO EL JUGADOR")
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(LiderFullAddress, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(10))
-	fmt.Print("Sgte Linea desde el Dial")
+	conn, err := grpc.Dial(LiderFullAddress, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(5000))
+	fmt.Println("Sgte Linea desde el Dial")
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 
-	fmt.Print("Dial Terminado")
+	fmt.Println("Dial Terminado")
 
 	c := pb.NewLiderClient(conn)
 
-	fmt.Print("Cliente Creado")
+	fmt.Println("Cliente Creado")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	r, err := c.Unirse(ctx, &pb.SolicitudUnirse{Solictud: "Quiero Jugar"})
-	fmt.Print("Sgte Linea desde el llamado Unirse")
+	fmt.Println("Sgte Linea desde el llamado Unirse")
 
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
-	fmt.Print("Llamado Remoto Finalizado")
-	log.Printf("Bienvenido al Juego: Tu Numero: Juego: " + r.GetNumJugador().String() + r.GetNumJuego().String())
+	fmt.Println("Llamado Remoto Finalizado")
+	log.Printf("Bienvenido al Juego: Tu Numero: Juego: " + r.GetNumJugador().String() + r.GetNumJuego().String() + "\n")
 }
 
 func itos() {
