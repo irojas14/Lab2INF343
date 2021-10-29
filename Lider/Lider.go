@@ -12,6 +12,7 @@ import (
 const (
 	nameNodeAddress = "alumno@dist152.inf.santiago.usm.cl"
 	nameNodePort    = ":50051"
+	Port            = ":50052"
 )
 
 var jugadorCount int32 = 0
@@ -23,12 +24,11 @@ type server struct {
 func (s *server) Unirse(ctx context.Context, in *pb.SolicitudUnirse) (*pb.RespuestaUnirse, error) {
 	log.Printf("Solicitud: " + in.GetSolictud())
 	jugadorCount++
-	//return &pb.RespuestaUnirse{NumJugador: JugadorId(jugadorCount), NumJuego: RespuestaUnirse_JUEGO.Luces}, nil
-	return nil, nil
+	return &pb.RespuestaUnirse{NumJugador: &pb.JugadorId{Val: jugadorCount}, NumJuego: pb.RespuestaUnirse_Luces}, nil
 }
 
 func main() {
-	lis, err := net.Listen("tcp", nameNodeAddress+nameNodePort)
+	lis, err := net.Listen("tcp", Port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
