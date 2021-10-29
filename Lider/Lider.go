@@ -3,6 +3,10 @@ package main
 import (
 	"context"
 	"log"
+	"net"
+
+	"google.golang.org/grpc"
+	pb "google.golang.org/grpc/Lab2INF343/Proto"
 )
 
 const (
@@ -16,10 +20,11 @@ type server struct {
 	pb.UnimplementedLiderServer
 }
 
-func (s *server) Unirse(ctx context.Context, in *pb.SolictudUnirse) (*pb.RespuestaUnirse, error) {
+func (s *server) Unirse(ctx context.Context, in *pb.SolicitudUnirse) (*pb.RespuestaUnirse, error) {
 	log.Printf("Solicitud: " + in.GetSolictud())
 	jugadorCount++
-	return &pb.RespuestaUnirse{NumJugador: JugadorId(jugadorCount), NumJuego: RespuestaUnirse_JUEGO.Luces}, nil
+	//return &pb.RespuestaUnirse{NumJugador: JugadorId(jugadorCount), NumJuego: RespuestaUnirse_JUEGO.Luces}, nil
+	return nil, nil
 }
 
 func main() {
