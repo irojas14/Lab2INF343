@@ -29,7 +29,7 @@ func (s *server) Unirse(ctx context.Context, in *pb.SolicitudUnirse) (*pb.Respue
 }
 
 func main() {
-	lis, err := net.Listen("tcp", Port)
+	lis, err := net.Listen("ssh", Port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
