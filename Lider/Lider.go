@@ -13,7 +13,8 @@ import (
 const (
 	nameNodeAddress = "alumno@dist152.inf.santiago.usm.cl"
 	nameNodePort    = ":50051"
-	Port            = ":50052"
+
+	address = "dist149.inf.santiago.usm.cl:50052"
 )
 
 var jugadorCount int32 = 0
@@ -29,7 +30,7 @@ func (s *server) Unirse(ctx context.Context, in *pb.SolicitudUnirse) (*pb.Respue
 }
 
 func main() {
-	lis, err := net.Listen("tcp", Port)
+	lis, err := net.Listen("tcp", address)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

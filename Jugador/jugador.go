@@ -12,9 +12,9 @@ import (
 )
 
 const (
-	LiderAddres = "alumno@dist149.inf.santiago.usm.cl"
+	LiderAddres = "dist149.inf.santiago.usm.cl"
 	LiderPort   = ":50052"
-	address     = "localhost:50052"
+	address     = "dist149.inf.santiago.usm.cl:50052"
 )
 
 func main() {
@@ -43,7 +43,7 @@ func main() {
 		log.Fatalf("could not greet: %v", err)
 	}
 	fmt.Println("Llamado Remoto Finalizado")
-	log.Printf("Bienvenido al Juego: Tu Numero: Juego: " + r.GetNumJugador().String() + r.GetNumJuego().String() + "\n")
+	log.Printf("Bienvenido al Juego: Numero: " + r.GetNumJugador().String() + " -> Juego: " + r.GetNumJuego().String() + "\n")
 }
 
 func itos() {
