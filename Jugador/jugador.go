@@ -18,6 +18,7 @@ const (
 )
 
 func main() {
+	fmt.Print("COMENZANDO EL JUGADOR")
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(LiderFullAddress, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -25,16 +26,22 @@ func main() {
 	}
 	defer conn.Close()
 
+	fmt.Print("Dial Terminado")
+
 	c := pb.NewLiderClient(conn)
+
+	fmt.Print("Cliente Creado")
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
 	r, err := c.Unirse(ctx, &pb.SolicitudUnirse{Solictud: "Quiero Jugar"})
+	fmt.Print("Sgte Linea desde el llamado Unirse")
 
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
+	fmt.Print("Llamado Remoto Finalizado")
 	log.Printf("Bienvenido al Juego: Tu Numero: Juego: " + r.GetNumJugador().String() + r.GetNumJuego().String())
 }
 
