@@ -20,7 +20,7 @@ const (
 func main() {
 	fmt.Println("COMENZANDO EL JUGADOR")
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(LiderFullAddress, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(5000))
+	conn, err := grpc.Dial(LiderFullAddress, grpc.WithInsecure(), grpc.WithBlock())
 	fmt.Println("Sgte Linea desde el Dial")
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
