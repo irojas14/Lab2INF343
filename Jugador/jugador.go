@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"time"
 
@@ -12,13 +13,20 @@ import (
 )
 
 const (
-	address = "dist149.inf.santiago.usm.cl:50052"
+	port    = ":50052"
+	local   = "localhost" + port
+	address = "dist149.inf.santiago.usm.cl" + port
 )
 
 func main() {
-	fmt.Println("COMENZANDO EL JUGADOR")
+	fmt.Printf("len Args: %v\n", len(os.Args))
+	dialAddrs := address
+	if len(os.Args) == 2 {
+		dialAddrs = local
+	}
+	fmt.Printf("COMENZANDO EL JUGADOR - Addr: %s", dialAddrs)
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
+	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
 	fmt.Println("Sgte Linea desde el Dial")
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)

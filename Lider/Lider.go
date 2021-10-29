@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"net"
+	"os"
 
 	pb "github.com/irojas14/Lab2INF343/Proto"
 
@@ -12,7 +14,9 @@ import (
 
 const (
 	nameNodeAddress = "dist152.inf.santiago.usm.cl:50051"
-	address         = "dist149.inf.santiago.usm.cl:50052"
+	sPort           = ":50052"
+	address         = "dist149.inf.santiago.usm.cl" + sPort
+	local           = "localhost" + sPort
 )
 
 var jugadorCount int32 = 0
@@ -28,7 +32,13 @@ func (s *server) Unirse(ctx context.Context, in *pb.SolicitudUnirse) (*pb.Respue
 }
 
 func main() {
-	lis, err := net.Listen("tcp", address)
+	fmt.Printf("Args len: %v\n", len(os.Args))
+	srvAddr := address
+	if len(os.Args) == 2 {
+		srvAddr = local
+	}
+
+	lis, err := net.Listen("tcp", srvAddr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
