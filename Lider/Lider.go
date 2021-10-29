@@ -11,10 +11,8 @@ import (
 )
 
 const (
-	nameNodeAddress = "alumno@dist152.inf.santiago.usm.cl"
-	nameNodePort    = ":50051"
-
-	address = "dist149.inf.santiago.usm.cl:50052"
+	nameNodeAddress = "dist152.inf.santiago.usm.cl:50051"
+	address         = "dist149.inf.santiago.usm.cl:50052"
 )
 
 var jugadorCount int32 = 0
