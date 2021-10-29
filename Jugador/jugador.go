@@ -41,7 +41,7 @@ func main() {
 		log.Fatalf("could not greet: %v", err)
 	}
 	fmt.Println("Llamado Remoto Finalizado")
-	log.Printf("Bienvenido al Juego: Tu Numero: Juego: " + r.GetNumJugador().String() + r.GetNumJuego().String() + "\n")
+	log.Printf("Bienvenido al Juego: Tu Numero: " + r.GetNumJugador().String() + " Juego: " + r.GetNumJuego().String() + "\n")
 }
 
 func itos() {
