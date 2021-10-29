@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	pb "github.com/irojas14/Lab2INF343/Proto"
 	"google.golang.org/grpc"
-	pb "google.golang.org/grpc/Lab2INF343/Proto"
 )
 
 const (
