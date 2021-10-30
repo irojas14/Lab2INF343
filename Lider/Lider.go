@@ -32,7 +32,7 @@ func (s *server) Unirse(ctx context.Context, in *pb.SolicitudUnirse) (*pb.Respue
 }
 
 func main() {
-	fmt.Printf("Args len: %v\n", len(os.Args))
+	fmt.Printf("rgs len: %v\n", len(os.Args))
 	srvAddr := address
 	if len(os.Args) == 2 {
 		srvAddr = local
@@ -40,11 +40,11 @@ func main() {
 
 	lis, err := net.Listen("tcp", srvAddr)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("faled to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterLiderServer(s, &server{})
-	log.Printf("Juego Inicializado: escuchando en %v", lis.Addr())
+	log.Printf("Juego Inicializado: escuhando en %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}

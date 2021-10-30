@@ -18,6 +18,11 @@ const (
 	address = "dist149.inf.santiago.usm.cl" + port
 )
 
+var (
+	numJugador pb.JugadorId
+	numRonda   pb.RondaId
+)
+
 func main() {
 	fmt.Printf("len Args: %v\n", len(os.Args))
 	dialAddrs := address
@@ -51,6 +56,13 @@ func main() {
 	fmt.Println("Llamado Remoto Finalizado")
 	log.Printf("Bienvenido al Juego: Tu Numero: " + r.GetNumJugador().String() + " Juego: " + r.GetNumJuego().String() + "\n")
 }
+
+// JUEGOS
+
+func Luces(c *pb.LiderClient) {
+}
+
+// AUXILIAR
 
 func itos() {
 	i := 10
