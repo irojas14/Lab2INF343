@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+//fmt.Print(rand.Intn(100), ",")
 const (
 	port    = ":50052"
 	local   = "localhost" + port
@@ -60,6 +62,9 @@ func main() {
 // JUEGOS
 
 func Luces(c *pb.LiderClient) {
+	s1 := rand.NewSource(time.Now().UnixNano())
+	r1 := rand.New(s1)
+	fmt.Printf("Random Value: %v", r1)
 }
 
 // AUXILIAR

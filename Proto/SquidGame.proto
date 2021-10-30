@@ -45,7 +45,7 @@ message RespuestaUnirse {
         TodoNada = 2;
 
     }
-    
+
     JugadorId numJugador = 1;
     JUEGO numJuego = 2;
     RondaId numRonda = 3;

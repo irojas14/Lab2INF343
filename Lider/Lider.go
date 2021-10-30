@@ -39,7 +39,8 @@ func (s *server) Unirse(ctx context.Context, in *pb.SolicitudUnirse) (*pb.Respue
 func main() {
 	fmt.Printf("rgs en: %v\n", len(os.Args))
 	svAddr := address
-if len(os.Args) == 2 {
+	
+	if len(os.Args) == 2 {
 		srvAddr = local
 	}
 
