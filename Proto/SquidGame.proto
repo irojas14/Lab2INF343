@@ -32,6 +32,20 @@ service DataNode {
 
 // LIDER
 
+// ENUMS
+
+enum JUEGO {
+    Luces = 0;
+    TirarCuerda = 1;
+    TodoNada = 2;
+}
+
+enum ESTADO {
+    ESTADO_MUERTO = 0;
+    ESTADO_VIVO = 1;
+    ESTADO_GANADOR = 2;
+}
+
 // Unirse
 
 message SolicitudUnirse {
@@ -39,13 +53,6 @@ message SolicitudUnirse {
 }
 
 message RespuestaUnirse {
-    enum JUEGO {
-        Luces = 0;
-        TirarCuerda = 1;
-        TodoNada = 2;
-
-    }
-
     JugadorId numJugador = 1;
     JUEGO numJuego = 2;
     RondaId numRonda = 3;
@@ -63,18 +70,12 @@ message RespuestaVerMonto {
 // Enviar Jugada
 
 message SolicitudEnviarJugada {
-    JugadaRondaJugador jugadaInfo = 1;
+    PaqueteJugada jugadaInfo = 1;
 }
 
 message RespuestaEnviarJugada {
-    enum ESTADO {
-        ESTADO_MUERTO = 0;
-        ESTADO_VIVO = 1;
-        ESTADO_GANADOR = 2;
-    }
     ESTADO estado = 1;
 }
-
 
 // NAMENODE Y DATANODE
 
@@ -112,10 +113,11 @@ message Jugada {
     int32 val = 1;
 }
 
-message JugadaRondaJugador {
+message PaqueteJugada {
     JugadorId numJugador = 1;
-    RondaId numRonda = 2;
-    Jugada jugada = 3;
+    JUEGO numJuego = 2;    
+    RondaId numRonda = 3;
+    Jugada jugada = 4;
 }
 
 message JugadasRonda {

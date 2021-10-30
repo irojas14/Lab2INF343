@@ -28,7 +28,7 @@ type server struct {
 func (s *server) Unirse(ctx context.Context, in *pb.SolicitudUnirse) (*pb.RespuestaUnirse, error) {
 	log.Printf("Solicitud: " + in.GetSolictud())
 	jugadorCount++
-	return &pb.RespuestaUnirse{NumJugador: &pb.JugadorId{Val: jugadorCount}, NumJuego: pb.RespuestaUnirse_Luces, NumRonda: &pb.RondaId{Val: 1}}, nil
+	return &pb.RespuestaUnirse{NumJugador: &pb.JugadorId{Val: jugadorCount}, NumJuego: pb.JUEGO_Luces, NumRonda: &pb.RondaId{Val: 1}}, nil
 }
 
 // Para actuaizar el Proto file, correr
@@ -38,20 +38,20 @@ func (s *server) Unirse(ctx context.Context, in *pb.SolicitudUnirse) (*pb.Respue
 
 func main() {
 	fmt.Printf("rgs en: %v\n", len(os.Args))
-	svAddr := address
-	
+	srvAddr := address
+
 	if len(os.Args) == 2 {
 		srvAddr = local
 	}
 
-	ls, err := net.Listen("tcp", srvAddr)
+	lis, err := net.Listen("tcp", srvAddr)
 	if err != nil {
-		log.Fatalf("faled to listen: %v", er)
+		log.Fatalf("faled to listen: %v", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterLiderServer(s, &server{})
-	lg.Printf("Juego Inicializado: escuhando en %v", lis.Addr())
-	f err := s.Serve(lis); err != nil {
+	log.Printf("Juego Inicializado: escuhando en %v", lis.Addr())
+	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
