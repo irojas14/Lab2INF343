@@ -58,7 +58,7 @@ func main() {
 		if err != nil {
 			log.Fatalf("\n%v.ListFeatures(_) = _, %v", c, err)
 		}
-		log.Println("\nRespuesta: %s\n", res)
+		log.Printf("\nRespuesta: %v\n", res)
 	}
 }
 
