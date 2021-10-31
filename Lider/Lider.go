@@ -25,6 +25,11 @@ const (
 var jugCountMux sync.Mutex;
 var jugadorCount int32 = 0
 
+var (
+	CurrentGame pb.JUEGO
+
+)
+
 type server struct {
 	pb.UnimplementedLiderServer
 }
@@ -35,10 +40,23 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 	jugCountMux.Lock()
 	defer jugCountMux.Unlock()
 
+	jugadorCount++;
+	
 	if (jugadorCount < MaxPlayers) {
 		res := &pb.RespuestaUnirse{
 			MsgTipo: pb.RespuestaUnirse_Esperar,
 			NumJugador: nil,
+			NumJuego: pb.JUEGO_None,
+			NumRonda: nil,
+		}
+		if err := stream.Send(res); err != nil {
+			return err
+		}
+	}
+	else if (jugadorCount == MaxPlayers) {
+		res := &pb.RespuestaUnirse{
+			MsgTipo: pb.RespuestaUnirse_Comenzar,
+			NumJugador: pb,
 			NumJuego: pb.JUEGO_None,
 			NumRonda: nil,
 		}
@@ -104,6 +122,7 @@ func LiderService() {
 	if err != nil {
 		log.Fatalf("failed to listen: %v\n", err)
 	}
+
 	s := grpc.NewServer()
 	pb.RegisterLiderServer(s, &server{})
 	log.Printf("Juego Inicializado: escuchando en %v\n", lis.Addr())
