@@ -27,7 +27,7 @@ const (
 	dn3Addrs = "dist152.inf.santiago.usm.cl"
 )
 
-var DataNodeAddresses [3]string{dn1Addrs, dn2Addrs, dn3Addrs}
+var DataNodeAddresses [3]string = [3]string{dn1Addrs, dn2Addrs, dn3Addrs}
 
 var JugadasDeJugadores = "JugadasDeJugadores.txt"
 
@@ -35,6 +35,11 @@ var JugadasDeJugadores = "JugadasDeJugadores.txt"
 type server struct {
 	pb.UnimplementedNameNodeServer
 }
+
+func formatInt32(n int32) string {
+    return strconv.FormatInt(int64(n), 10)
+}
+
 
 func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 
@@ -54,7 +59,7 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 		//items[0] = Jugador_numero
 		//items[1] = Ronda_numero
 		//items[2] = ip_datanode
-		if items[0] == "Jugador_" + strconv.Itoa(numjugador) {
+		if items[0] == "Jugador_" + formatInt32(numjugador) {
 			fmt.Println(items)
 
 			conn, err := grpc.Dial(items[2], grpc.WithInsecure(), grpc.WithBlock())

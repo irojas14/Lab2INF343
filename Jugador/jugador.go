@@ -27,55 +27,81 @@ var (
 	ClientCurrentGame pb.JUEGO
 )
 
+var waitc chan string = make(chan string)
+
 func main() {
 	dialAddrs := address
 	if len(os.Args) == 2 {
 		dialAddrs = local
 	}
-	fmt.Printf("COMENZANDO EL JUGADOR - Addr: %s", dialAddrs)
+	fmt.Printf("COMENZANDO EL JUGADOR - Addr: %s\n", dialAddrs)
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+		log.Fatalf("did not connect: %v\n", err)
 	}
 	defer conn.Close()
 	c := pb.NewLiderClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
+	//ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	//defer cancel()
 
-	stream, err := c.Unirse(ctx, &pb.SolicitudUnirse{})
+	stream, err := c.Unirse(context.Background(), &pb.SolicitudUnirse{})
 	
 	if err != nil {
 		log.Fatalf("Error: %v\n", err)
 		return;
 	}
 	for {
-		res, err := stream.Recv()
+		r, err := stream.Recv()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			log.Fatalf("\n%v.ListFeatures(_) = _, %v", c, err)
+			log.Fatalf("\nError al Recibir: %v - %v\n", c, err)
+			break;
 		}
-		log.Printf("\nRespuesta: %v\n", res)
+		log.Println("\nRespuesta: " + r.String())
+
+		if r.MsgTipo == pb.RespuestaUnirse_Comenzar {
+			ClientNumJugador = *r.GetNumJugador()
+			ClientNumRonda = *r.GetNumRonda()
+			ClientCurrentGame = r.GetNumJuego()
+			log.Printf("Valores: %v - %v - %v\n", ClientNumJugador.GetVal(), ClientNumRonda.GetVal(), ClientCurrentGame)
+			break;
+		}
 	}
+	if (ClientCurrentGame == pb.JUEGO_Luces) {
+		go Luces(c)
+	}
+	<-waitc
 }
 
 // JUEGOS
 
-func Luces(c pb.LiderClient, ctx context.Context, cancel context.CancelFunc) {
+func Luces(c pb.LiderClient) (error) {
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
 	var randval int32 = r1.Int31()
 	fmt.Printf("Random Value: %v", r1)
+	
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
 
-	c.EnviarJugada(ctx, &pb.SolicitudEnviarJugada{
+	r, err := c.EnviarJugada(ctx, &pb.SolicitudEnviarJugada{
 		JugadaInfo: &pb.PaqueteJugada{
 			NumJugador: &pb.JugadorId{Val: ClientNumJugador.Val},
 			NumJuego:   ClientCurrentGame,
 			NumRonda:   &pb.RondaId{Val: ClientNumRonda.Val},
 			Jugada:     &pb.Jugada{Val: randval}}})
+	
+	if err != nil {
+		log.Fatalf("Error al jugar luces: %v\n", err)
+		return err
+	}
+	fmt.Printf("Respuesta Jugada: %v", r.String())
+	waitc<- "done"
+	return nil
 }
 
 // AUXILIAR

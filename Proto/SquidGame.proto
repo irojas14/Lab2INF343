@@ -40,9 +40,9 @@ enum JUEGO {
 }
 
 enum ESTADO {
-    ESTADO_MUERTO = 0;
-    ESTADO_VIVO = 1;
-    ESTADO_GANADOR = 2;
+    Muerto = 0;
+    Vivo = 1;
+    Ganador = 2;
 }
 
 

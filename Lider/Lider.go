@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	MaxPlayers = 16
+	MaxPlayers = 2
 	nameNodeAddress = "dist152.inf.santiago.usm.cl:50050"
 	pozoAddress = "dist150.inf.santiago.usm.cl:50051"
 	sPort           = ":50052"
@@ -27,53 +27,71 @@ var jugadorCount int32 = 0
 
 var (
 	CurrentGame pb.JUEGO
-
+	gameReadyChan chan bool = make(chan bool)
 )
+
 
 type server struct {
 	pb.UnimplementedLiderServer
 }
 
 func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) error {
-	fmt.Println("Jugador Uniéndose")
+	fmt.Printf("Jugador Uniéndose - jugadores actuales: %v\n", jugadorCount)
+
+	if (jugadorCount > MaxPlayers) {
+		return nil
+	}
 	
 	jugCountMux.Lock()
-	defer jugCountMux.Unlock()
-
 	jugadorCount++;
-	
-	if (jugadorCount < MaxPlayers) {
+	countCont := jugadorCount
+	jugNum := &pb.JugadorId{Val: countCont}
+	jugCountMux.Unlock()
+
+	fmt.Printf("Jugador Count: %v - jugNum: %v\n", jugadorCount, jugNum)
+
+	if (jugNum.GetVal() < MaxPlayers) {
 		res := &pb.RespuestaUnirse{
 			MsgTipo: pb.RespuestaUnirse_Esperar,
-			NumJugador: nil,
+			NumJugador: jugNum,
 			NumJuego: pb.JUEGO_None,
 			NumRonda: nil,
 		}
+		fmt.Printf("Sending Res: %v\n", res.String())
 		if err := stream.Send(res); err != nil {
 			return err
 		}
-	}
-	else if (jugadorCount == MaxPlayers) {
+		fmt.Println("Esperando más jugadores")
+
+		res.MsgTipo = pb.RespuestaUnirse_Comenzar
+		res.NumJuego = pb.JUEGO_Luces
+		res.NumRonda = &pb.RondaId{Val: 0}
+		
+		<-gameReadyChan
+
+		if err := stream.Send(res); err != nil {
+			return err;
+		}
+
+	} else if (jugNum.GetVal() == MaxPlayers) {
 		res := &pb.RespuestaUnirse{
 			MsgTipo: pb.RespuestaUnirse_Comenzar,
-			NumJugador: pb,
-			NumJuego: pb.JUEGO_None,
-			NumRonda: nil,
+			NumJugador: jugNum,
+			NumJuego: pb.JUEGO_Luces,
+			NumRonda: &pb.RondaId{Val: 0},
 		}
 		if err := stream.Send(res); err != nil {
-			return err
+			return err;
 		}
+		gameReadyChan<- true
 	}
 	return nil
 }
 
-type player_info struct {
-	NumJugador pb.JugadorId
-	NumRonda pb.RondaId
-	NumJuego pb.JUEGO
-}
+func (s *server) EnviarJugada(ctx context.Context, in *pb.SolicitudEnviarJugada) (*pb.RespuestaEnviarJugada, error) {
 
-var players []player_info
+	return &pb.RespuestaEnviarJugada{Estado: pb.ESTADO_Muerto}, nil
+}
 
 func VerMonto() {
 	dialAddrs := pozoAddress;
