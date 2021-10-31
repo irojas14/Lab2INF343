@@ -33,9 +33,10 @@ service DataNode {
 // ENUMS
 
 enum JUEGO {
-    Luces = 0;
-    TirarCuerda = 1;
-    TodoNada = 2;
+    None = 0;
+    Luces = 1;
+    TirarCuerda = 2;
+    TodoNada = 3;
 }
 
 enum ESTADO {

@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"os"
 
@@ -15,6 +17,7 @@ import (
 const (
 	MaxPlayers = 16
 	nameNodeAddress = "dist152.inf.santiago.usm.cl:50050"
+	pozoAddress = "dist150.inf.santiago.usm.cl:50051"
 	sPort           = ":50052"
 	address         = "dist149.inf.santiago.usm.cl" + sPort
 	local           = "localhost" + sPort
@@ -31,17 +34,43 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 	defer jugCountMux.Unlock()
 
 	if (jugadorCount < MaxPlayers) {
-		res := &pb.RespuestaUnirse {
-
+		res := &pb.RespuestaUnirse{
+			MsgTipo: pb.RespuestaUnirse_Esperar,
+			NumJugador: nil,
+			NumJuego: pb.JUEGO_None,
+			NumRonda: nil,
+		}
+		if err := stream.Send(res); err != nil {
+			return err
 		}
 	}
-
+	return nil
 }
 
-func (s *server) UnirseProcessing() {
-	if (jugadorCount < MaxPlayers) {
-
+func VerMonto() {
+	dialAddrs := pozoAddress;
+	if len(os.Args) == 2 {
+		dialAddrs = "localhost:50051"
 	}
+	fmt.Printf("Consultando Pozo - Addr: %s", dialAddrs)
+	// Set up a connection to the server.
+	
+	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	c := pb.NewPozoClient(conn)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	r, err := c.VerMonto(ctx, &pb.SolicitudVerMonto{})
+
+	if err != nil {
+		log.Fatalf("could not greet: %v", err)
+	}
+	fmt.Println("El Monto Acumulado Actual es: %f", r.GetMonto())
 }
 
 // Para actuaizar el Proto file, correr
@@ -66,5 +95,7 @@ func main() {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+
+	VerMonto();
 }
 

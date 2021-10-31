@@ -1,9 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log"
+	"net"
 	"os"
+
+	pb "github.com/irojas14/Lab2INF343/Proto"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -14,12 +20,42 @@ const (
 
 
 var JugadoreEliminados = "JugadoresEliminados.txt"
+var MontoAcumulado int32 = 0
+
+type server struct {
+	pb.UnimplementedPozoServer
+}
+
+func (s *server) VerMonto(ctx context.Context, in *pb.SolicitudVerMonto) (*pb.RespuestaVerMonto, error) {
+    return &pb.RespuestaVerMonto{ Monto: float32(MontoAcumulado) }, nil
+}
 
 func main() {
+	srvAddr := address
+	if len(os.Args) == 2 {
+		srvAddr = local
+	}
+
+	lis, err := net.Listen("tcp", srvAddr)
+	if err != nil {
+		log.Fatalf("faled to listen: %v", err)
+	}
+
+	s := grpc.NewServer()
+
+	pb.RegisterPozoServer(s, &server{})
+	log.Printf("Pozo escuchando en %v", lis.Addr())
+	
+    if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
+
+    /*
     createFile()
-    writeFile()
+    JugadorEliminado()
     readFile()
     deleteFile()
+    */
 }
 
 func createFile() {
@@ -38,7 +74,7 @@ func createFile() {
     fmt.Println("File Created Successfully", JugadoreEliminados)
 }
 
-func writeFile() {
+func JugadorEliminado() {
     // Open file using READ & WRITE permission.
     var file, err = os.OpenFile(JugadoreEliminados, os.O_RDWR, 0644)
     if isError(err) {
