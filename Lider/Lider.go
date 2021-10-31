@@ -96,7 +96,7 @@ func (s *server) EnviarJugada(ctx context.Context, in *pb.SolicitudEnviarJugada)
 		randval := funcs.RandomInRange(6, 10)
 
 		if (randval >= in.GetJugadaInfo().GetJugada().GetVal()) {
-			estado = pb.Estado_Muerto
+			estado = pb.ESTADO_Muerto
 		}
 	}
 	return &pb.RespuestaEnviarJugada{Estado: estado}, nil
