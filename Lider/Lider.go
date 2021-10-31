@@ -30,7 +30,8 @@ type server struct {
 }
 
 func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) error {
-	fmt.Println("ALGUIEN UNIÉNDOSE")
+	fmt.Println("Jugador Uniéndose")
+	
 	jugCountMux.Lock()
 	defer jugCountMux.Unlock()
 
@@ -47,6 +48,14 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 	}
 	return nil
 }
+
+type player_info struct {
+	NumJugador pb.JugadorId
+	NumRonda pb.RondaId
+	NumJuego pb.JUEGO
+}
+
+var players []player_info
 
 func VerMonto() {
 	dialAddrs := pozoAddress;
@@ -82,12 +91,10 @@ func VerMonto() {
 func main() {
 	waitc := make(chan struct{})
 	go LiderService()
-	VerMonto()
 	<-waitc
 }
 
 func LiderService() {
-	fmt.Printf("rgs en: %v\n", len(os.Args))
 	srvAddr := address
 	if len(os.Args) == 2 {
 		srvAddr = local
@@ -95,11 +102,11 @@ func LiderService() {
 
 	lis, err := net.Listen("tcp", srvAddr)
 	if err != nil {
-		log.Fatalf("faled tolisten: %v", err)
+		log.Fatalf("failed to listen: %v\n", err)
 	}
 	s := grpc.NewServer()
 	pb.RegisterLiderServer(s, &server{})
-	log.Printf("Juego Inicializado: escuchando en %v", lis.Addr())
+	log.Printf("Juego Inicializado: escuchando en %v\n", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
