@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -82,10 +81,8 @@ func main() {
 // JUEGOS
 
 func Luces(c pb.LiderClient) (error) {
-	s1 := rand.NewSource(time.Now().UnixNano())
-	r1 := rand.New(s1)
 	var randval int32 = funcs.RandomInRange(1, 10)
-	fmt.Printf("Random Value: %v\n", r1)
+	fmt.Printf("Random Value: %v\n", randval)
 	
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()

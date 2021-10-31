@@ -81,7 +81,9 @@ message SolicitudEnviarJugada {
 }
 
 message RespuestaEnviarJugada {
-    ESTADO estado = 1;
+    JUEGO juego = 1;
+    Jugada jugadaLider = 2;    
+    ESTADO estado = 3;
 }
 
 // NAMENODE Y DATANODE
