@@ -91,16 +91,17 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 func (s *server) EnviarJugada(ctx context.Context, in *pb.SolicitudEnviarJugada) (*pb.RespuestaEnviarJugada, error) {
 	
 	estado := pb.ESTADO_Muerto
+	var jugadaLider int32 = 0
 	if (in.GetJugadaInfo().NumJuego == pb.JUEGO_Luces) {
 		fmt.Printf("Procesando Jugada de Luces: %v\n", in.String())
-		randval := funcs.RandomInRange(6, 10)
-		fmt.Printf("Valor Líder: %v\n", randval)
+		jugadaLider := funcs.RandomInRange(6, 10)
+		fmt.Printf("Valor Líder: %v\n", jugadaLider)
 
-		if (randval >= in.GetJugadaInfo().GetJugada().GetVal()) {
+		if (jugadaLider >= in.GetJugadaInfo().GetJugada().GetVal()) {
 			estado = pb.ESTADO_Vivo
 		}
 	}
-	return &pb.RespuestaEnviarJugada{NumJuego: in.GetNumJuego(), JugadaLider: &pb.Jugada{Val: randval}, Estado: estado}, nil
+	return &pb.RespuestaEnviarJugada{NumJuego: in.GetJugadaInfo().GetNumJuego(), JugadaLider: &pb.Jugada{Val: jugadaLider}, Estado: estado}, nil
 }
 
 func VerMonto() {

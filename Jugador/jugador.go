@@ -98,7 +98,7 @@ func Luces(c pb.LiderClient) (error) {
 		log.Fatalf("Error al jugar luces: %v\n", err)
 		return err
 	}
-	fmt.Printf("Respuesta Jugada - ESTADO: %v", r.GetEstado().String())	
+	fmt.Printf("Respuesta Jugada: %v", r.String())
 	waitc<- "done"
 	return nil
 }
