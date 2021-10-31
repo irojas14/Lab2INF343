@@ -81,12 +81,12 @@ func VerMonto() {
 
 func main() {
 	waitc := make(chan struct{})
-	go temp()
+	go LiderService()
 	VerMonto()
 	<-waitc
 }
 
-func temp() {
+func LiderService() {
 	fmt.Printf("rgs en: %v\n", len(os.Args))
 	srvAddr := address
 	if len(os.Args) == 2 {
