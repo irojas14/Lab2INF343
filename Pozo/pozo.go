@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	port    = ":50052"
+	port    = ":50051"
 	local   = "localhost" + port
 	address = "dist150.inf.santiago.usm.cl" + port
 )
@@ -27,6 +27,7 @@ type server struct {
 }
 
 func (s *server) VerMonto(ctx context.Context, in *pb.SolicitudVerMonto) (*pb.RespuestaVerMonto, error) {
+    log.Println("Sirviendo Solicitud de Ver Monto")
     return &pb.RespuestaVerMonto{ Monto: float32(MontoAcumulado) }, nil
 }
 

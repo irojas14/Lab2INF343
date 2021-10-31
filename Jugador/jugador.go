@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -38,19 +39,27 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
-	/*
 	c := pb.NewLiderClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	err := c.Unirse(ctx, &pb.SolicitudUnirse{Solictud: "Quiero Jugar"})
-
+	stream, err := c.Unirse(ctx, &pb.SolicitudUnirse{})
+	
 	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+		log.Fatalf("Error: %v\n", err)
+		return;
 	}
-	fmt.Println("Llamado Remoto Finalizado")
-	*/
+	for {
+		res, err := stream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("\n%v.ListFeatures(_) = _, %v", c, err)
+		}
+		log.Println("\nRespuesta: %s\n", res)
+	}
 }
 
 // JUEGOS

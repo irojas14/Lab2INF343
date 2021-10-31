@@ -30,6 +30,7 @@ type server struct {
 }
 
 func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) error {
+	fmt.Println("ALGUIEN UNIÉNDOSE")
 	jugCountMux.Lock()
 	defer jugCountMux.Unlock()
 
@@ -70,7 +71,7 @@ func VerMonto() {
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
-	fmt.Println("El Monto Acumulado Actual es: %f", r.GetMonto())
+	fmt.Printf("\nEl Monto Acumulado Actual es: %f\n", r.GetMonto())
 }
 
 // Para actuaizar el Proto file, correr
@@ -79,6 +80,13 @@ func VerMonto() {
 // go get -u github.com/irojas14/Lab2INF343
 
 func main() {
+	waitc := make(chan struct{})
+	go temp()
+	VerMonto()
+	<-waitc
+}
+
+func temp() {
 	fmt.Printf("rgs en: %v\n", len(os.Args))
 	srvAddr := address
 	if len(os.Args) == 2 {
@@ -91,11 +99,9 @@ func main() {
 	}
 	s := grpc.NewServer()
 	pb.RegisterLiderServer(s, &server{})
-	log.Printf("Juego Inicializado: escuhano en %v", lis.Addr())
+	log.Printf("Juego Inicializado: escuchando en %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
-
-	VerMonto();
 }
 
