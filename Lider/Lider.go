@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 
-	"os"
-
+	funcs "github.com/irojas14/Lab2INF343/Funciones"
 	pb "github.com/irojas14/Lab2INF343/Proto"
 	"google.golang.org/grpc"
 )
@@ -89,11 +89,17 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 }
 
 func (s *server) EnviarJugada(ctx context.Context, in *pb.SolicitudEnviarJugada) (*pb.RespuestaEnviarJugada, error) {
-
-	if (CurrentGame == pb.JUEGO_Luces) {
+	
+	estado := pb.ESTADO_Vivo
+	if (in.GetJugadaInfo().NumJuego == pb.JUEGO_Luces) {
 		fmt.Printf("Procesando Jugada de Luces: %v\n", in.String())
+		randval := funcs.RandomInRange(6, 10)
+
+		if (randval >= in.GetJugadaInfo().GetJugada().GetVal()) {
+			estado = pb.Estado_Muerto
+		}
 	}
-	return &pb.RespuestaEnviarJugada{Estado: pb.ESTADO_Muerto}, nil
+	return &pb.RespuestaEnviarJugada{Estado: estado}, nil
 }
 
 func VerMonto() {
