@@ -100,7 +100,7 @@ func (s *server) EnviarJugada(ctx context.Context, in *pb.SolicitudEnviarJugada)
 			estado = pb.ESTADO_Vivo
 		}
 	}
-	return &pb.RespuestaEnviarJugada{Estado: estado}, nil
+	return &pb.RespuestaEnviarJugada{NumJuego: in.GetNumJuego(), JugadaLider: &pb.Jugada{Val: randval}, Estado: estado}, nil
 }
 
 func VerMonto() {

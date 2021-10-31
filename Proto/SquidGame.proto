@@ -81,7 +81,7 @@ message SolicitudEnviarJugada {
 }
 
 message RespuestaEnviarJugada {
-    JUEGO juego = 1;
+    JUEGO numJuego = 1;
     Jugada jugadaLider = 2;    
     ESTADO estado = 3;
 }
