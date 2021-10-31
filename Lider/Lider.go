@@ -90,6 +90,9 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 
 func (s *server) EnviarJugada(ctx context.Context, in *pb.SolicitudEnviarJugada) (*pb.RespuestaEnviarJugada, error) {
 
+	if (CurrentGame == pb.JUEGO_Luces) {
+		fmt.Printf("Procesando Jugada de Luces: %v\n", in.String())
+	}
 	return &pb.RespuestaEnviarJugada{Estado: pb.ESTADO_Muerto}, nil
 }
 

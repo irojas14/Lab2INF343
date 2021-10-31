@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	funcs "github.com/irojas14/Lab2INF343/Funciones"
+
 	pb "github.com/irojas14/Lab2INF343/Proto"
 	"google.golang.org/grpc"
 )
@@ -82,8 +84,8 @@ func main() {
 func Luces(c pb.LiderClient) (error) {
 	s1 := rand.NewSource(time.Now().UnixNano())
 	r1 := rand.New(s1)
-	var randval int32 = r1.Int31()
-	fmt.Printf("Random Value: %v", r1)
+	var randval int32 = funcs.RandomInRange(1, 10)
+	fmt.Printf("Random Value: %v\n", r1)
 	
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -99,7 +101,7 @@ func Luces(c pb.LiderClient) (error) {
 		log.Fatalf("Error al jugar luces: %v\n", err)
 		return err
 	}
-	fmt.Printf("Respuesta Jugada: %v", r.String())
+	fmt.Printf("Respuesta Jugada - ESTADO: %v", r.GetEstado().String())	
 	waitc<- "done"
 	return nil
 }
@@ -112,3 +114,4 @@ func itos() {
 	s2 := strconv.Itoa(i)
 	fmt.Printf("%v, %v\n", s1, s2)
 }
+//genera un random entre 10 y 15.
