@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type LiderClient interface {
-	Unirse(ctx context.Context, in *SolicitudUnirse, opts ...grpc.CallOption) (*RespuestaUnirse, error)
+	Unirse(ctx context.Context, in *SolicitudUnirse, opts ...grpc.CallOption) (Lider_UnirseClient, error)
 	VerMonto(ctx context.Context, in *SolicitudVerMonto, opts ...grpc.CallOption) (*RespuestaVerMonto, error)
 	EnviarJugada(ctx context.Context, in *SolicitudEnviarJugada, opts ...grpc.CallOption) (*RespuestaEnviarJugada, error)
 }
@@ -31,13 +31,36 @@ func NewLiderClient(cc grpc.ClientConnInterface) LiderClient {
 	return &liderClient{cc}
 }
 
-func (c *liderClient) Unirse(ctx context.Context, in *SolicitudUnirse, opts ...grpc.CallOption) (*RespuestaUnirse, error) {
-	out := new(RespuestaUnirse)
-	err := c.cc.Invoke(ctx, "/Proto.Lider/Unirse", in, out, opts...)
+func (c *liderClient) Unirse(ctx context.Context, in *SolicitudUnirse, opts ...grpc.CallOption) (Lider_UnirseClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Lider_ServiceDesc.Streams[0], "/Proto.Lider/Unirse", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &liderUnirseClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type Lider_UnirseClient interface {
+	Recv() (*RespuestaUnirse, error)
+	grpc.ClientStream
+}
+
+type liderUnirseClient struct {
+	grpc.ClientStream
+}
+
+func (x *liderUnirseClient) Recv() (*RespuestaUnirse, error) {
+	m := new(RespuestaUnirse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *liderClient) VerMonto(ctx context.Context, in *SolicitudVerMonto, opts ...grpc.CallOption) (*RespuestaVerMonto, error) {
@@ -62,7 +85,7 @@ func (c *liderClient) EnviarJugada(ctx context.Context, in *SolicitudEnviarJugad
 // All implementations must embed UnimplementedLiderServer
 // for forward compatibility
 type LiderServer interface {
-	Unirse(context.Context, *SolicitudUnirse) (*RespuestaUnirse, error)
+	Unirse(*SolicitudUnirse, Lider_UnirseServer) error
 	VerMonto(context.Context, *SolicitudVerMonto) (*RespuestaVerMonto, error)
 	EnviarJugada(context.Context, *SolicitudEnviarJugada) (*RespuestaEnviarJugada, error)
 	mustEmbedUnimplementedLiderServer()
@@ -72,8 +95,8 @@ type LiderServer interface {
 type UnimplementedLiderServer struct {
 }
 
-func (UnimplementedLiderServer) Unirse(context.Context, *SolicitudUnirse) (*RespuestaUnirse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Unirse not implemented")
+func (UnimplementedLiderServer) Unirse(*SolicitudUnirse, Lider_UnirseServer) error {
+	return status.Errorf(codes.Unimplemented, "method Unirse not implemented")
 }
 func (UnimplementedLiderServer) VerMonto(context.Context, *SolicitudVerMonto) (*RespuestaVerMonto, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerMonto not implemented")
@@ -94,22 +117,25 @@ func RegisterLiderServer(s grpc.ServiceRegistrar, srv LiderServer) {
 	s.RegisterService(&Lider_ServiceDesc, srv)
 }
 
-func _Lider_Unirse_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SolicitudUnirse)
-	if err := dec(in); err != nil {
-		return nil, err
+func _Lider_Unirse_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SolicitudUnirse)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(LiderServer).Unirse(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Proto.Lider/Unirse",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LiderServer).Unirse(ctx, req.(*SolicitudUnirse))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(LiderServer).Unirse(m, &liderUnirseServer{stream})
+}
+
+type Lider_UnirseServer interface {
+	Send(*RespuestaUnirse) error
+	grpc.ServerStream
+}
+
+type liderUnirseServer struct {
+	grpc.ServerStream
+}
+
+func (x *liderUnirseServer) Send(m *RespuestaUnirse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _Lider_VerMonto_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -156,10 +182,6 @@ var Lider_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*LiderServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Unirse",
-			Handler:    _Lider_Unirse_Handler,
-		},
-		{
 			MethodName: "VerMonto",
 			Handler:    _Lider_VerMonto_Handler,
 		},
@@ -168,7 +190,13 @@ var Lider_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Lider_EnviarJugada_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "Unirse",
+			Handler:       _Lider_Unirse_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "Proto/SquidGame.proto",
 }
 

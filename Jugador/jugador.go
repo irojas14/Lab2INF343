@@ -38,23 +38,19 @@ func main() {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
+	/*
 	c := pb.NewLiderClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	r, err := c.Unirse(ctx, &pb.SolicitudUnirse{Solictud: "Quiero Jugar"})
+	err := c.Unirse(ctx, &pb.SolicitudUnirse{Solictud: "Quiero Jugar"})
 
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
 	fmt.Println("Llamado Remoto Finalizado")
-
-	ClientNumJugador = *r.GetNumJugador()
-	ClientNumRonda = *r.GetNumRonda()
-	ClientCurrentGame = r.GetNumJuego()
-
-	log.Printf("Bienvenido al Juego: Tu Numero: " + r.GetNumJugador().String() + " Juego: " + r.GetNumJuego().String() + " Numero Ronda: " + r.GetNumRonda().String() + "\n")
+	*/
 }
 
 // JUEGOS

@@ -7,7 +7,7 @@ package Proto;
 // SERVICIOS
 
 service Lider {
-    rpc Unirse (SolicitudUnirse) returns (RespuestaUnirse);
+    rpc Unirse (SolicitudUnirse) returns (stream RespuestaUnirse);
     rpc VerMonto (SolicitudVerMonto) returns (RespuestaVerMonto);
     rpc EnviarJugada (SolicitudEnviarJugada) returns (RespuestaEnviarJugada);
 }
@@ -30,8 +30,6 @@ service DataNode {
 
 // MENSAJES de Solicitud y Respuesta
 
-// LIDER
-
 // ENUMS
 
 enum JUEGO {
@@ -46,6 +44,9 @@ enum ESTADO {
     ESTADO_GANADOR = 2;
 }
 
+
+// LIDER
+
 // Unirse
 
 message SolicitudUnirse {
@@ -53,9 +54,14 @@ message SolicitudUnirse {
 }
 
 message RespuestaUnirse {
-    JugadorId numJugador = 1;
-    JUEGO numJuego = 2;
-    RondaId numRonda = 3;
+    enum TIPO {
+        Esperar = 0;
+        Comenzar = 1;
+    }
+    TIPO msgTipo = 1;
+    JugadorId numJugador = 2;
+    JUEGO numJuego = 3;
+    RondaId numRonda = 4;
 }
 
 // Ver Monto
