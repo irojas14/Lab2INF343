@@ -37,6 +37,7 @@ enum JUEGO {
     Luces = 1;
     TirarCuerda = 2;
     TodoNada = 3;
+    Fin = 4;
 }
 
 enum ESTADO {

@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"time"
 
 	funcs "github.com/irojas14/Lab2INF343/Funciones"
 
@@ -83,11 +82,8 @@ func main() {
 func Luces(c pb.LiderClient) (error) {
 	var randval int32 = funcs.RandomInRange(1, 10)
 	fmt.Printf("Random Value: %v\n", randval)
-	
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
 
-	r, err := c.EnviarJugada(ctx, &pb.SolicitudEnviarJugada{
+	r, err := c.EnviarJugada(context.Background(), &pb.SolicitudEnviarJugada{
 		JugadaInfo: &pb.PaqueteJugada{
 			NumJugador: &pb.JugadorId{Val: ClientNumJugador.Val},
 			NumJuego:   ClientCurrentGame,

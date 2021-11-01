@@ -10,6 +10,7 @@ import (
 	"time"
 
 	funcs "github.com/irojas14/Lab2INF343/Funciones"
+
 	pb "github.com/irojas14/Lab2INF343/Proto"
 	"google.golang.org/grpc"
 )
@@ -22,12 +23,20 @@ const (
 	address         = "dist149.inf.santiago.usm.cl" + sPort
 	local           = "localhost" + sPort
 )
-var jugCountMux sync.Mutex;
-var jugadorCount int32 = 0
+var waitCountMux sync.Mutex;
+var waitingCount int32 = 0
+var CurrentAlivePlayers int32 = 0
 
 var (
-	CurrentGame pb.JUEGO
-	gameReadyChan chan bool = make(chan bool)
+	ResponsesCount  int32 = 0
+	ResponsesCountMux sync.Mutex
+)
+
+var (
+	JuegoActual pb.JUEGO
+	gameReadyChan chan int32 = make(chan int32)
+	gameLiderValChan chan int32 = make(chan int32)
+	inGameWaitingChan chan int32 = make(chan int32)
 )
 
 
@@ -36,19 +45,19 @@ type server struct {
 }
 
 func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) error {
-	fmt.Printf("Jugador Uniéndose - jugadores actuales: %v\n", jugadorCount)
+	fmt.Printf("Jugador Uniéndose - jugadores actuales: %v\n", waitingCount)
 
-	if (jugadorCount > MaxPlayers) {
+	if (waitingCount > MaxPlayers) {
 		return nil
 	}
 	
-	jugCountMux.Lock()
-	jugadorCount++;
-	countCont := jugadorCount
+	waitCountMux.Lock()
+	waitingCount++;
+	countCont := waitingCount
 	jugNum := &pb.JugadorId{Val: countCont}
-	jugCountMux.Unlock()
+	waitCountMux.Unlock()
 
-	fmt.Printf("Jugador Count: %v - jugNum: %v\n", jugadorCount, jugNum)
+	fmt.Printf("Jugador Count: %v - jugNum: %v\n", waitingCount, jugNum)
 
 	if (jugNum.GetVal() < MaxPlayers) {
 		res := &pb.RespuestaUnirse{
@@ -83,20 +92,33 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 		if err := stream.Send(res); err != nil {
 			return err;
 		}
-		gameReadyChan<- true
+		CurrentAlivePlayers = res.GetNumJugador().GetVal()
+		fmt.Printf("CurrentAlivePlayers: %v\n", CurrentAlivePlayers)
+		gameReadyChan<- 0
 	}
 	return nil
 }
 
 func (s *server) EnviarJugada(ctx context.Context, in *pb.SolicitudEnviarJugada) (*pb.RespuestaEnviarJugada, error) {
 	
+	fmt.Printf("Procesando una jugada enviada: Responses: %v\n", ResponsesCount)
 	estado := pb.ESTADO_Muerto
-	var jugadaLider int32 = 0
-	if (in.GetJugadaInfo().NumJuego == pb.JUEGO_Luces) {
-		fmt.Printf("Procesando Jugada de Luces: %v\n", in.String())
-		jugadaLider := funcs.RandomInRange(6, 10)
-		fmt.Printf("Valor Líder: %v\n", jugadaLider)
+	
+	ResponsesCountMux.Lock()
+	ResponsesCount++
+	ResponsesCountMux.Unlock()
 
+	fmt.Printf("Responses Tomada en Cuenta: %v\n", ResponsesCount)
+	fmt.Printf("Responses == Current?: %v\n", ResponsesCount==CurrentAlivePlayers)
+	if (ResponsesCount == CurrentAlivePlayers) {
+		fmt.Println("RespuestasListas")
+		inGameWaitingChan<- 0
+	}
+
+	jugadaLider := <-gameLiderValChan
+
+	if (in.GetJugadaInfo().NumJuego == pb.JUEGO_Luces) {
+		fmt.Printf("Valor Líder: %v\n", jugadaLider)
 		if (jugadaLider >= in.GetJugadaInfo().GetJugada().GetVal()) {
 			estado = pb.ESTADO_Vivo
 		}
@@ -138,7 +160,56 @@ func VerMonto() {
 func main() {
 	waitc := make(chan struct{})
 	go LiderService()
+	go Update()
 	<-waitc
+}
+
+func Update() {
+	for {
+		if (JuegoActual == pb.JUEGO_Luces) {
+			JuegoLucesWaitForResponses()
+		}
+	}
+}
+
+func JuegoLucesWaitForResponses() {
+	<-inGameWaitingChan
+	gameLiderValChan<- funcs.RandomInRange(6, 10)
+}
+
+var changeStateChannel chan int32 = make(chan int32)
+
+func CambiarEtapa(nEtapa pb.JUEGO) {
+	
+	fmt.Printf("EtadoActual: %v - Nuevo: %v\n", JuegoActual, nEtapa)
+	
+	// Pre-procesamiento
+	if (JuegoActual == pb.JUEGO_None) {
+
+	} else if (JuegoActual == pb.JUEGO_Luces) {
+
+	} else if (JuegoActual == pb.JUEGO_TirarCuerda) {
+
+	} else if (JuegoActual == pb.JUEGO_TodoNada) {
+
+	} else if (JuegoActual == pb.JUEGO_Fin) {
+
+	}
+
+	JuegoActual = nEtapa;
+
+	// Post-procesamiento
+	if (JuegoActual == pb.JUEGO_None) {
+
+		} else if (JuegoActual == pb.JUEGO_Luces) {
+	
+		} else if (JuegoActual == pb.JUEGO_TirarCuerda) {
+	
+		} else if (JuegoActual == pb.JUEGO_TodoNada) {
+	
+		} else if (JuegoActual == pb.JUEGO_Fin) {
+	
+		}
 }
 
 func LiderService() {
