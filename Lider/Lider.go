@@ -181,7 +181,7 @@ var changeStateChannel chan int32 = make(chan int32)
 
 func CambiarEtapa(nEtapa pb.JUEGO) {
 	
-	fmt.Printf("EtadoActual: %v - Nuevo: %v\n", JuegoActual, nEtapa)
+	fmt.Printf("EstadoActual: %v - Nuevo: %v\n", JuegoActual, nEtapa)
 	
 	// Pre-procesamiento
 	if (JuegoActual == pb.JUEGO_None) {

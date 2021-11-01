@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
+	funcs "github.com/irojas14/Lab2INF343/Funciones"
 	pb "github.com/irojas14/Lab2INF343/Proto"
 	"google.golang.org/grpc"
 )
@@ -22,28 +22,37 @@ const (
 
 const (
 	dnPort = ":50055"
-	dn1Addrs = "dist150.inf.santiago.usm.cl"
-	dn2Addrs = "dist151.inf.santiago.usm.cl"
-	dn3Addrs = "dist152.inf.santiago.usm.cl"
+	dn1Addrs = "dist150.inf.santiago.usm.cl" + dnPort
+	dn2Addrs = "dist151.inf.santiago.usm.cl" + dnPort
+	dn3Addrs = "dist152.inf.santiago.usm.cl" + dnPort
+)
+
+const (
+	dnLocal = "localhost"
+	local1 = dnLocal + ":50055"
+	local2 = dnLocal + ":50056"
+	local3 = dnLocal + ":50057"
+)
+
+var (
+	RemoteAddrs [3]string = [3]string{dn1Addrs, dn2Addrs, dn3Addrs} 
+	localAddrs [3]string = [3]string{local1, local2, local3}
+	curAddrs [3]string
 )
 
 var DataNodeAddresses [3]string = [3]string{dn1Addrs, dn2Addrs, dn3Addrs}
 
-var JugadasDeJugadores = "JugadasDeJugadores.txt"
+var UbicacionJugadasJugadores = "UbicaciónJugadasDeJugadores.txt"
 
 
 type server struct {
 	pb.UnimplementedNameNodeServer
 }
 
-func formatInt32(n int32) string {
-    return strconv.FormatInt(int64(n), 10)
-}
-
 
 func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 
-	file, ferr := os.Open(JugadasDeJugadores)
+	file, ferr := os.Open(UbicacionJugadasJugadores)
 	if ferr != nil {
 		panic(ferr)
 	}
@@ -59,7 +68,7 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 		//items[0] = Jugador_numero
 		//items[1] = Ronda_numero
 		//items[2] = ip_datanode
-		if items[0] == "Jugador_" + formatInt32(numjugador) {
+		if items[0] == "Jugador_" + funcs.FormatInt32(numjugador) {
 			fmt.Println(items)
 
 			conn, err := grpc.Dial(items[2], grpc.WithInsecure(), grpc.WithBlock())
@@ -87,15 +96,6 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 	return res, nil
 }
 
-func isError(err error) bool {
-    if err != nil {
-        fmt.Println(err.Error())
-    }
-
-    return (err != nil)
-}
-
-
 
 func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrarJugadas) (*pb.RespuestaRegistrarJugadas, error) {
     log.Println("Sirviendo Solicitud de Registrar Jugada")
@@ -117,5 +117,48 @@ func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJu
 		return nil, err;
 	}
 	return &pb.RespuestaDevolverJugadas{JugadasJugador: jj}, nil
+}
+
+func main() {	
+	curAddrs = RemoteAddrs
+	fmt.Println("Comenzando El NameNode")	
+	if len(os.Args) == 2 {
+		curAddrs = localAddrs
+	}
+
+	for _, elem := range(curAddrs) {
+		fmt.Printf(elem + " - ")
+	}
+	fmt.Println()
+
+	// Set up a connection to the server.
+	conn, err := grpc.Dial(curAddrs[0], grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v\n", err)
+	}
+	defer conn.Close()
+	c := pb.NewDataNodeClient(conn)
+
+	r, err := c.RegistrarJugadas(context.Background(), &pb.SolicitudRegistrarJugadas{})
+
+	if err != nil {
+		log.Fatalf("Error en la respuesta: %v\n", err)
+	}
+	fmt.Println("Respuesta Recibida: " + r.String())
+
+	// Set up a connection to the server.
+	conn, err = grpc.Dial(curAddrs[1], grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v\n", err)
+	}
+
+	c = pb.NewDataNodeClient(conn)
+
+	r, err = c.RegistrarJugadas(context.Background(), &pb.SolicitudRegistrarJugadas{})
+
+	if err != nil {
+		log.Fatalf("Error en la respuesta: %v\n", err)
+	}
+	fmt.Println("Respuesta Recibida: " + r.String())
 }
 
