@@ -205,8 +205,16 @@ func CambiarEtapa(nEtapa pb.JUEGO) {
 
 	} else if JuegoActual == pb.JUEGO_TirarCuerda {
 		/*
-
-		 */
+			jugadores := []int{1, 2, 3, 4, 5, 6, 7, 8}// acá debería ir el array con los jugadores actuales
+			rand.Seed(time.Now().UnixNano())
+			rand.Shuffle(len(jugadores), func(i, j int) { jugadores[i], jugadores[j] = jugadores[j], jugadores[i] }) // se desordenan
+			var largo_jugadores int = len(jugadores)
+			if (largo_jugadores % 2){
+				judaroes = jugadores[0:largo_jugadores-1] //elimina el ultimo (despues del shuffle por lo que igual es random)
+			}
+			var team_1 []int = jugadores[0:largo_judadores/2]
+			var team_2 []int = jugadores[largo_jugadores/2:largo_jugadores]
+		*/
 	} else if JuegoActual == pb.JUEGO_TodoNada {
 
 	} else if JuegoActual == pb.JUEGO_Fin {
