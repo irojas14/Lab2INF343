@@ -47,10 +47,10 @@ func main() {
 	//defer cancel()
 
 	stream, err := c.Unirse(context.Background(), &pb.SolicitudUnirse{})
-	
+
 	if err != nil {
 		log.Fatalf("Error: %v\n", err)
-		return;
+		return
 	}
 	for {
 		r, err := stream.Recv()
@@ -59,7 +59,7 @@ func main() {
 		}
 		if err != nil {
 			log.Fatalf("\nError al Recibir: %v - %v\n", c, err)
-			break;
+			break
 		}
 		log.Println("\nRespuesta: " + r.String())
 
@@ -68,10 +68,10 @@ func main() {
 			ClientNumRonda = *r.GetNumRonda()
 			ClientCurrentGame = r.GetNumJuego()
 			log.Printf("Valores: %v - %v - %v\n", ClientNumJugador.GetVal(), ClientNumRonda.GetVal(), ClientCurrentGame)
-			break;
+			break
 		}
 	}
-	if (ClientCurrentGame == pb.JUEGO_Luces) {
+	if ClientCurrentGame == pb.JUEGO_Luces {
 		go Luces(c)
 	}
 	<-waitc
@@ -79,7 +79,7 @@ func main() {
 
 // JUEGOS
 
-func Luces(c pb.LiderClient) (error) {
+func Luces(c pb.LiderClient) error {
 	var randval int32 = funcs.RandomInRange(1, 10)
 	fmt.Printf("Random Value: %v\n", randval)
 
@@ -89,15 +89,37 @@ func Luces(c pb.LiderClient) (error) {
 			NumJuego:   ClientCurrentGame,
 			NumRonda:   &pb.RondaId{Val: ClientNumRonda.Val},
 			Jugada:     &pb.Jugada{Val: randval}}})
-	
+
 	if err != nil {
 		log.Fatalf("Error al jugar luces: %v\n", err)
 		return err
 	}
 	fmt.Printf("Respuesta Jugada: %v", r.String())
-	waitc<- "done"
+	waitc <- "done"
 	return nil
 }
+
+/*
+func TirarCuerda(c pb.LiderClient) error {
+	var randval int32 = funcs.RandomInRange(1, 4)
+	fmt.Printf("Random Value: %v\n", randval)
+
+	r, err := c.EnviarJugada(context.Background(), &pb.SolicitudEnviarJugada{
+		JugadaInfo: &pb.PaqueteJugada{
+			NumJugador: &pb.JugadorId{Val: ClientNumJugador.Val},
+			NumJuego:   ClientCurrentGame,
+			NumRonda:   &pb.RondaId{Val: ClientNumRonda.Val},
+			Jugada:     &pb.Jugada{Val: randval}}})
+
+	if err != nil {
+		log.Fatalf("Error al jugar tirar cierda: %v\n", err)
+		return err
+	}
+	fmt.Printf("Respuesta Jugada: %v", r.String())
+	waitc <- "done"
+	return nil
+}
+*/
 
 // AUXILIAR
 
@@ -107,4 +129,5 @@ func itos() {
 	s2 := strconv.Itoa(i)
 	fmt.Printf("%v, %v\n", s1, s2)
 }
+
 //genera un random entre 10 y 15.

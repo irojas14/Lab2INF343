@@ -16,29 +16,29 @@ import (
 )
 
 const (
-	MaxPlayers = 2
+	MaxPlayers      = 2
 	nameNodeAddress = "dist152.inf.santiago.usm.cl:50050"
-	pozoAddress = "dist150.inf.santiago.usm.cl:50051"
+	pozoAddress     = "dist150.inf.santiago.usm.cl:50051"
 	sPort           = ":50052"
 	address         = "dist149.inf.santiago.usm.cl" + sPort
 	local           = "localhost" + sPort
 )
-var waitCountMux sync.Mutex;
+
+var waitCountMux sync.Mutex
 var waitingCount int32 = 0
 var CurrentAlivePlayers int32 = 0
 
 var (
-	ResponsesCount  int32 = 0
+	ResponsesCount    int32 = 0
 	ResponsesCountMux sync.Mutex
 )
 
 var (
-	JuegoActual pb.JUEGO
-	gameReadyChan chan int32 = make(chan int32)
-	gameLiderValChan chan int32 = make(chan int32)
+	JuegoActual       pb.JUEGO
+	gameReadyChan     chan int32 = make(chan int32)
+	gameLiderValChan  chan int32 = make(chan int32)
 	inGameWaitingChan chan int32 = make(chan int32)
 )
-
 
 type server struct {
 	pb.UnimplementedLiderServer
@@ -47,24 +47,24 @@ type server struct {
 func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) error {
 	fmt.Printf("Jugador Uniéndose - jugadores actuales: %v\n", waitingCount)
 
-	if (waitingCount > MaxPlayers) {
+	if waitingCount > MaxPlayers {
 		return nil
 	}
-	
+
 	waitCountMux.Lock()
-	waitingCount++;
+	waitingCount++
 	countCont := waitingCount
 	jugNum := &pb.JugadorId{Val: countCont}
 	waitCountMux.Unlock()
 
 	fmt.Printf("Jugador Count: %v - jugNum: %v\n", waitingCount, jugNum)
 
-	if (jugNum.GetVal() < MaxPlayers) {
+	if jugNum.GetVal() < MaxPlayers {
 		res := &pb.RespuestaUnirse{
-			MsgTipo: pb.RespuestaUnirse_Esperar,
+			MsgTipo:    pb.RespuestaUnirse_Esperar,
 			NumJugador: jugNum,
-			NumJuego: pb.JUEGO_None,
-			NumRonda: nil,
+			NumJuego:   pb.JUEGO_None,
+			NumRonda:   nil,
 		}
 		fmt.Printf("Sending Res: %v\n", res.String())
 		if err := stream.Send(res); err != nil {
@@ -75,65 +75,71 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 		res.MsgTipo = pb.RespuestaUnirse_Comenzar
 		res.NumJuego = pb.JUEGO_Luces
 		res.NumRonda = &pb.RondaId{Val: 0}
-		
+
 		<-gameReadyChan
 
 		if err := stream.Send(res); err != nil {
-			return err;
+			return err
 		}
 
-	} else if (jugNum.GetVal() == MaxPlayers) {
+	} else if jugNum.GetVal() == MaxPlayers {
 		res := &pb.RespuestaUnirse{
-			MsgTipo: pb.RespuestaUnirse_Comenzar,
+			MsgTipo:    pb.RespuestaUnirse_Comenzar,
 			NumJugador: jugNum,
-			NumJuego: pb.JUEGO_Luces,
-			NumRonda: &pb.RondaId{Val: 0},
+			NumJuego:   pb.JUEGO_Luces,
+			NumRonda:   &pb.RondaId{Val: 0},
 		}
 		if err := stream.Send(res); err != nil {
-			return err;
+			return err
 		}
 		CurrentAlivePlayers = res.GetNumJugador().GetVal()
 		fmt.Printf("CurrentAlivePlayers: %v\n", CurrentAlivePlayers)
-		gameReadyChan<- 0
+		gameReadyChan <- 0
 	}
 	return nil
 }
 
 func (s *server) EnviarJugada(ctx context.Context, in *pb.SolicitudEnviarJugada) (*pb.RespuestaEnviarJugada, error) {
-	
+
 	fmt.Printf("Procesando una jugada enviada: Responses: %v\n", ResponsesCount)
 	estado := pb.ESTADO_Muerto
-	
+
 	ResponsesCountMux.Lock()
 	ResponsesCount++
 	ResponsesCountMux.Unlock()
 
 	fmt.Printf("Responses Tomada en Cuenta: %v\n", ResponsesCount)
-	fmt.Printf("Responses == Current?: %v\n", ResponsesCount==CurrentAlivePlayers)
-	if (ResponsesCount == CurrentAlivePlayers) {
+	fmt.Printf("Responses == Current?: %v\n", ResponsesCount == CurrentAlivePlayers)
+	if ResponsesCount == CurrentAlivePlayers {
 		fmt.Println("RespuestasListas")
-		inGameWaitingChan<- 0
+		inGameWaitingChan <- 0
 	}
 
 	jugadaLider := <-gameLiderValChan
 
-	if (in.GetJugadaInfo().NumJuego == pb.JUEGO_Luces) {
+	if in.GetJugadaInfo().NumJuego == pb.JUEGO_Luces {
+		fmt.Printf("Valor Líder: %v\n", jugadaLider)
+		if jugadaLider >= in.GetJugadaInfo().GetJugada().GetVal() {
+			estado = pb.ESTADO_Vivo
+		}
+	} /* else if (in.GetJugadaInfo().NumJuego == pb.JUEGO_TirarCuerda) {
 		fmt.Printf("Valor Líder: %v\n", jugadaLider)
 		if (jugadaLider >= in.GetJugadaInfo().GetJugada().GetVal()) {
 			estado = pb.ESTADO_Vivo
 		}
 	}
+	*/
 	return &pb.RespuestaEnviarJugada{NumJuego: in.GetJugadaInfo().GetNumJuego(), JugadaLider: &pb.Jugada{Val: jugadaLider}, Estado: estado}, nil
 }
 
 func VerMonto() {
-	dialAddrs := pozoAddress;
+	dialAddrs := pozoAddress
 	if len(os.Args) == 2 {
 		dialAddrs = "localhost:50051"
 	}
 	fmt.Printf("Consultando Pozo - Addr: %s", dialAddrs)
 	// Set up a connection to the server.
-	
+
 	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
@@ -166,50 +172,61 @@ func main() {
 
 func Update() {
 	for {
-		if (JuegoActual == pb.JUEGO_Luces) {
+		if JuegoActual == pb.JUEGO_Luces {
 			JuegoLucesWaitForResponses()
-		}
+		} /*else if (JuegoActual == pb.JUEGO_TirarCuerda) {
+			JuegoTirarCuerdaWaitForResponses()
+		}*/
 	}
 }
 
 func JuegoLucesWaitForResponses() {
 	<-inGameWaitingChan
-	gameLiderValChan<- funcs.RandomInRange(6, 10)
+	gameLiderValChan <- funcs.RandomInRange(6, 10)
 }
+
+/*
+func JuegoTirarCuerdaWaitForResponses() {
+	<-inGameWaitingChan
+	gameLiderValChan<- funcs.RandomInRange(1, 4)
+}
+*/
 
 var changeStateChannel chan int32 = make(chan int32)
 
 func CambiarEtapa(nEtapa pb.JUEGO) {
-	
+
 	fmt.Printf("EstadoActual: %v - Nuevo: %v\n", JuegoActual, nEtapa)
-	
+
 	// Pre-procesamiento
-	if (JuegoActual == pb.JUEGO_None) {
+	if JuegoActual == pb.JUEGO_None {
 
-	} else if (JuegoActual == pb.JUEGO_Luces) {
+	} else if JuegoActual == pb.JUEGO_Luces {
 
-	} else if (JuegoActual == pb.JUEGO_TirarCuerda) {
+	} else if JuegoActual == pb.JUEGO_TirarCuerda {
+		/*
 
-	} else if (JuegoActual == pb.JUEGO_TodoNada) {
+		 */
+	} else if JuegoActual == pb.JUEGO_TodoNada {
 
-	} else if (JuegoActual == pb.JUEGO_Fin) {
+	} else if JuegoActual == pb.JUEGO_Fin {
 
 	}
 
-	JuegoActual = nEtapa;
+	JuegoActual = nEtapa
 
 	// Post-procesamiento
-	if (JuegoActual == pb.JUEGO_None) {
+	if JuegoActual == pb.JUEGO_None {
 
-		} else if (JuegoActual == pb.JUEGO_Luces) {
-	
-		} else if (JuegoActual == pb.JUEGO_TirarCuerda) {
-	
-		} else if (JuegoActual == pb.JUEGO_TodoNada) {
-	
-		} else if (JuegoActual == pb.JUEGO_Fin) {
-	
-		}
+	} else if JuegoActual == pb.JUEGO_Luces {
+
+	} else if JuegoActual == pb.JUEGO_TirarCuerda {
+
+	} else if JuegoActual == pb.JUEGO_TodoNada {
+
+	} else if JuegoActual == pb.JUEGO_Fin {
+
+	}
 }
 
 func LiderService() {
@@ -230,4 +247,3 @@ func LiderService() {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
-
