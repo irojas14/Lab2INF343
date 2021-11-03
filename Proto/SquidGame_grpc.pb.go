@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 type LiderClient interface {
 	Unirse(ctx context.Context, in *SolicitudUnirse, opts ...grpc.CallOption) (Lider_UnirseClient, error)
 	VerMonto(ctx context.Context, in *SolicitudVerMonto, opts ...grpc.CallOption) (*RespuestaVerMonto, error)
-	EnviarJugada(ctx context.Context, in *SolicitudEnviarJugada, opts ...grpc.CallOption) (*RespuestaEnviarJugada, error)
+	EnviarJugada(ctx context.Context, opts ...grpc.CallOption) (Lider_EnviarJugadaClient, error)
 }
 
 type liderClient struct {
@@ -72,13 +72,35 @@ func (c *liderClient) VerMonto(ctx context.Context, in *SolicitudVerMonto, opts 
 	return out, nil
 }
 
-func (c *liderClient) EnviarJugada(ctx context.Context, in *SolicitudEnviarJugada, opts ...grpc.CallOption) (*RespuestaEnviarJugada, error) {
-	out := new(RespuestaEnviarJugada)
-	err := c.cc.Invoke(ctx, "/Proto.Lider/EnviarJugada", in, out, opts...)
+func (c *liderClient) EnviarJugada(ctx context.Context, opts ...grpc.CallOption) (Lider_EnviarJugadaClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Lider_ServiceDesc.Streams[1], "/Proto.Lider/EnviarJugada", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &liderEnviarJugadaClient{stream}
+	return x, nil
+}
+
+type Lider_EnviarJugadaClient interface {
+	Send(*EnvioJugada) error
+	Recv() (*EnvioJugada, error)
+	grpc.ClientStream
+}
+
+type liderEnviarJugadaClient struct {
+	grpc.ClientStream
+}
+
+func (x *liderEnviarJugadaClient) Send(m *EnvioJugada) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *liderEnviarJugadaClient) Recv() (*EnvioJugada, error) {
+	m := new(EnvioJugada)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // LiderServer is the server API for Lider service.
@@ -87,7 +109,7 @@ func (c *liderClient) EnviarJugada(ctx context.Context, in *SolicitudEnviarJugad
 type LiderServer interface {
 	Unirse(*SolicitudUnirse, Lider_UnirseServer) error
 	VerMonto(context.Context, *SolicitudVerMonto) (*RespuestaVerMonto, error)
-	EnviarJugada(context.Context, *SolicitudEnviarJugada) (*RespuestaEnviarJugada, error)
+	EnviarJugada(Lider_EnviarJugadaServer) error
 	mustEmbedUnimplementedLiderServer()
 }
 
@@ -101,8 +123,8 @@ func (UnimplementedLiderServer) Unirse(*SolicitudUnirse, Lider_UnirseServer) err
 func (UnimplementedLiderServer) VerMonto(context.Context, *SolicitudVerMonto) (*RespuestaVerMonto, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method VerMonto not implemented")
 }
-func (UnimplementedLiderServer) EnviarJugada(context.Context, *SolicitudEnviarJugada) (*RespuestaEnviarJugada, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method EnviarJugada not implemented")
+func (UnimplementedLiderServer) EnviarJugada(Lider_EnviarJugadaServer) error {
+	return status.Errorf(codes.Unimplemented, "method EnviarJugada not implemented")
 }
 func (UnimplementedLiderServer) mustEmbedUnimplementedLiderServer() {}
 
@@ -156,22 +178,30 @@ func _Lider_VerMonto_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Lider_EnviarJugada_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SolicitudEnviarJugada)
-	if err := dec(in); err != nil {
+func _Lider_EnviarJugada_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(LiderServer).EnviarJugada(&liderEnviarJugadaServer{stream})
+}
+
+type Lider_EnviarJugadaServer interface {
+	Send(*EnvioJugada) error
+	Recv() (*EnvioJugada, error)
+	grpc.ServerStream
+}
+
+type liderEnviarJugadaServer struct {
+	grpc.ServerStream
+}
+
+func (x *liderEnviarJugadaServer) Send(m *EnvioJugada) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *liderEnviarJugadaServer) Recv() (*EnvioJugada, error) {
+	m := new(EnvioJugada)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
-	if interceptor == nil {
-		return srv.(LiderServer).EnviarJugada(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Proto.Lider/EnviarJugada",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(LiderServer).EnviarJugada(ctx, req.(*SolicitudEnviarJugada))
-	}
-	return interceptor(ctx, in, info, handler)
+	return m, nil
 }
 
 // Lider_ServiceDesc is the grpc.ServiceDesc for Lider service.
@@ -185,16 +215,18 @@ var Lider_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "VerMonto",
 			Handler:    _Lider_VerMonto_Handler,
 		},
-		{
-			MethodName: "EnviarJugada",
-			Handler:    _Lider_EnviarJugada_Handler,
-		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Unirse",
 			Handler:       _Lider_Unirse_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "EnviarJugada",
+			Handler:       _Lider_EnviarJugada_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "Proto/SquidGame.proto",

@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
+	"time"
 
 	funcs "github.com/irojas14/Lab2INF343/Funciones"
 
@@ -14,7 +16,6 @@ import (
 	"google.golang.org/grpc"
 )
 
-//fmt.Print(rand.Intn(100), ",")
 const (
 	port    = ":50052"
 	local   = "localhost" + port
@@ -30,6 +31,7 @@ var (
 var waitc chan string = make(chan string)
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
 	dialAddrs := address
 	if len(os.Args) == 2 {
 		dialAddrs = local
@@ -72,9 +74,8 @@ func main() {
 		}
 	}
 	if ClientCurrentGame == pb.JUEGO_Luces {
-		go Luces(c)
+		Luces(c)
 	}
-	<-waitc
 }
 
 // JUEGOS
@@ -83,19 +84,62 @@ func Luces(c pb.LiderClient) error {
 	var randval int32 = funcs.RandomInRange(1, 10)
 	fmt.Printf("Random Value: %v\n", randval)
 
-	r, err := c.EnviarJugada(context.Background(), &pb.SolicitudEnviarJugada{
+	stream, err := c.EnviarJugada(context.Background())
+
+	/*
 		JugadaInfo: &pb.PaqueteJugada{
 			NumJugador: &pb.JugadorId{Val: ClientNumJugador.Val},
 			NumJuego:   ClientCurrentGame,
 			NumRonda:   &pb.RondaId{Val: ClientNumRonda.Val},
 			Jugada:     &pb.Jugada{Val: randval}}})
+	*/
 
 	if err != nil {
-		log.Fatalf("Error al jugar luces: %v\n", err)
-		return err
+		return nil
 	}
-	fmt.Printf("Respuesta Jugada: %v", r.String())
-	waitc <- "done"
+
+	for {
+		jugada := pb.EnvioJugada{
+			Tipo:       pb.EnvioJugada_Jugada,
+			Rol:        pb.EnvioJugada_Jugador,
+			NumJuego:   pb.JUEGO_Luces,
+			NumRonda:   &ClientNumRonda,
+			NumJugador: &ClientNumJugador,
+			Jugada:     &pb.Jugada{Val: randval},
+		}
+
+		fmt.Printf("Enviando Jugada al Lider: %v\n", jugada.Jugada)
+		stream.Send(&jugada)
+
+		fmt.Println("Jugada Enviada, Esperando Resolución")
+
+		in, err := stream.Recv()
+
+		if err == io.EOF {
+			log.Fatalf("END OF FILE: %v\n", err)
+			return nil
+		}
+
+		if err != nil {
+			log.Fatalf("Error No EOF: %v\n", err)
+			return err
+		}
+
+		fmt.Printf("Respuesta Jugada: %v - Estado: %v\n", in.String(), in.Estado.String())
+
+		if in.GetEstado() == pb.ESTADO_Muerto {
+			fmt.Println("Muerto, Cerrando Stream y Volviendo")
+			stream.CloseSend()
+			return nil
+		}
+
+		in2, err := stream.Recv()
+
+		if in2.GetTipo() == pb.EnvioJugada_NuevaRonda {
+			fmt.Println("Pasamos a la Siguiente Ronda")
+		}
+	}
+	//waitc <- "done"
 	return nil
 }
 
@@ -129,5 +173,3 @@ func itos() {
 	s2 := strconv.Itoa(i)
 	fmt.Printf("%v, %v\n", s1, s2)
 }
-
-//genera un random entre 10 y 15.

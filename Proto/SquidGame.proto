@@ -9,7 +9,7 @@ package Proto;
 service Lider {
     rpc Unirse (SolicitudUnirse) returns (stream RespuestaUnirse);
     rpc VerMonto (SolicitudVerMonto) returns (RespuestaVerMonto);
-    rpc EnviarJugada (SolicitudEnviarJugada) returns (RespuestaEnviarJugada);
+    rpc EnviarJugada (stream EnvioJugada) returns (stream EnvioJugada);
 }
 
 service Pozo {
@@ -76,6 +76,28 @@ message RespuestaVerMonto {
 }
 
 // Enviar Jugada
+
+message EnvioJugada {
+    enum TIPOS {
+        None = 0;
+        Jugada = 1;
+        NuevaRonda = 2;
+        NuevoJuego = 3;
+        Fin = 4;
+    }
+    enum ROLES {
+        Jugador = 0;
+        Lider = 1;
+    }
+    TIPOS tipo = 1;
+    ROLES rol = 2;
+    JugadorId numJugador = 3;
+    JUEGO numJuego = 4;
+    RondaId numRonda = 5;    
+    Jugada jugada = 6;
+    ESTADO estado = 7;
+}
+
 
 message SolicitudEnviarJugada {
     PaqueteJugada jugadaInfo = 1;
