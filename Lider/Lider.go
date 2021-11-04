@@ -46,8 +46,6 @@ var (
 	inGameWaitingChan chan int32 = make(chan int32)
 )
 
-var esperaRespuestas bool = true
-
 type server struct {
 	pb.UnimplementedLiderServer
 }
@@ -116,7 +114,6 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 	
 	for {		
 		fmt.Printf("Procesando una jugada enviada: Responses: %v\n", ResponsesCount)
-
 		fmt.Println("Esperando una Jugada de un Jugador")
 		
 		in, err := stream.Recv()
@@ -193,8 +190,34 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 				}
 
 				fmt.Printf("Esperando La Siguiente Ronda: %v - Jugador: %v\n", CurrentRonda, in.GetNumJugador())
-				<-inGameWaitingChan
-				fmt.Printf("Enviando Aviso de Comienzo de la Siguiente Ronda: %v - Jugador: %v\n", CurrentRonda, in.GetNumJugador())
+				waitingRes := <-inGameWaitingChan
+
+				if waitingRes == 2 {
+					fmt.Printf("Juego Acabado: Au Revoir Jugador: %v\n", in.GetNumJugador())
+					fin := &pb.EnvioJugada{
+						Tipo:     pb.EnvioJugada_Fin,
+						Rol:      pb.EnvioJugada_Lider,
+						NumJuego: pb.JUEGO_Luces,
+						Jugada:   &pb.Jugada{Val: jugadaLider},
+						NumJugador: in.GetNumJugador(),
+					}
+					stream.Send(fin)
+					break
+				} else if waitingRes == 1 {
+					fmt.Printf("Juego Acabado: Au Revoir Jugador: %v\n", in.GetNumJugador())
+					fin := &pb.EnvioJugada{
+						Tipo:     pb.EnvioJugada_NuevoJuego,
+						Rol:      pb.EnvioJugada_Lider,
+						NumJuego: JuegoActual,
+						Jugada:   nil,
+						NumJugador: in.GetNumJugador(),
+						NumRonda: &pb.RondaId{Val: CurrentRonda},
+					}
+					stream.Send(fin)
+					break						
+				} else {
+					fmt.Printf("Enviando Aviso de Comienzo de la Siguiente Ronda: %v - Jugador: %v\n", CurrentRonda, in.GetNumJugador())
+				}
 
 				nuevaRonda := pb.EnvioJugada{
 					Tipo:     pb.EnvioJugada_NuevaRonda,
@@ -208,47 +231,6 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 	}
 	return nil
 }
-
-/*
-func (s *server) EnviarJugada(ctx context.Context, in *pb.SolicitudEnviarJugada) (*pb.RespuestaEnviarJugada, error) {
-
-	fmt.Printf("Procesando una jugada enviada: Responses: %v\n", ResponsesCount)
-	estado := pb.ESTADO_Muerto
-
-	ResponsesCountMux.Lock()
-	ResponsesCount++
-	ResponsesCountMux.Unlock()
-
-	fmt.Printf("Responses Tomada en Cuenta: %v\n", ResponsesCount)
-	fmt.Printf("Responses == Current?: %v\n", ResponsesCount == CurrentAlivePlayers)
-	if ResponsesCount == CurrentAlivePlayers {
-		fmt.Println("RespuestasListas")
-		inGameWaitingChan <- 0
-	}
-
-	fmt.Println("Esperando")
-	jugadaLider := <-gameLiderValChan
-	fmt.Println("Respuestas del Lider recibida")
-
-	if in.GetJugadaInfo().GetNumJuego() == pb.JUEGO_Luces {
-		fmt.Printf("Valor Líder: %v\n", jugadaLider)
-		if jugadaLider > in.GetJugadaInfo().GetJugada().GetVal() {
-			estado = pb.ESTADO_Vivo
-		} else {
-			estado = pb.ESTADO_Muerto
-		}
-		fmt.Printf("ESTADO Jugador %v: %v\n", in.JugadaInfo.NumJugador.Val, estado.String())
-	} /* else if (in.GetJugadaInfo().NumJuego == pb.JUEGO_TirarCuerda) {
-		fmt.Printf("Valor Líder: %v\n", jugadaLider)
-		if (jugadaLider >= in.GetJugadaInfo().GetJugada().GetVal()) {
-			estado = pb.ESTADO_Vivo
-		}
-	}
-*/ /*
-	return &pb.RespuestaEnviarJugada{NumJuego: in.GetJugadaInfo().GetNumJuego(), JugadaLider: &pb.Jugada{Val: jugadaLider}, Estado: estado}, nil
-}
-
-*/
 
 func VerMonto() {
 	dialAddrs := pozoAddress
@@ -281,8 +263,9 @@ func VerMonto() {
 // O CON
 // go get -u github.com/irojas14/Lab2INF343
 
+var waitc chan int = make(chan int)
 func main() {
-	waitc := make(chan struct{})
+
 	go LiderService()
 	go Update()
 	<-waitc
@@ -290,11 +273,19 @@ func main() {
 
 func Update() {
 	for {
+		if terminarJuego {
+			fmt.Println(("Terminando Juego"))
+			break;
+		}
 		if JuegoActual == pb.JUEGO_Luces {
 			JuegoLucesWaitForResponses()
+		} else if JuegoActual == pb.JUEGO_TirarCuerda {
+			JuegoTirarCuerdaWaitForResponses()
 		}
 	}
 }
+
+var terminarJuego = false;
 
 func JuegoLucesWaitForResponses() {
 	fmt.Printf("En Juego Luces Responses: Responses: %v - Ronda: %v\n", ResponsesCount, CurrentRonda)
@@ -317,8 +308,14 @@ func JuegoLucesWaitForResponses() {
 		fmt.Println("Juego Luces Terminado")
 		// Matar a los jugadores
 		CurrentRonda = 0
-	} else {
-		esperaRespuestas = true
+		for i = 0; i < CurrentAlivePlayers; i++ {
+			fmt.Printf("Activando: %v\n", i)		
+			inGameWaitingChan <- 1
+			fmt.Printf("Activado: %v\n", i)
+			CambiarEtapa(pb.JUEGO_TirarCuerda)
+		}
+		//terminarJuego = true;
+		return
 	}
 	CurrentRondaMux.Unlock()
 
@@ -331,12 +328,11 @@ func JuegoLucesWaitForResponses() {
 	fmt.Println("Última Línea Juego Luces")
 }
 
-/*
 func JuegoTirarCuerdaWaitForResponses() {
+	fmt.Println("Processando Tirar Cuerda")
 	<-inGameWaitingChan
 	gameLiderValChan<- funcs.RandomInRange(1, 4)
 }
-*/
 
 func CambiarEtapa(nEtapa pb.JUEGO) {
 
@@ -348,6 +344,7 @@ func CambiarEtapa(nEtapa pb.JUEGO) {
 	} else if JuegoActual == pb.JUEGO_Luces {
 
 	} else if JuegoActual == pb.JUEGO_TirarCuerda {
+		fmt.Printf("En 2do Juego")
 		/*
 			jugadores := []int{1, 2, 3, 4, 5, 6, 7, 8}// acá debería ir el array con los jugadores actuales
 			rand.Seed(time.Now().UnixNano())
@@ -377,7 +374,6 @@ func CambiarEtapa(nEtapa pb.JUEGO) {
 	} else if JuegoActual == pb.JUEGO_TodoNada {
 
 	} else if JuegoActual == pb.JUEGO_Fin {
-
 	}
 }
 

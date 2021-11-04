@@ -34,6 +34,7 @@ func main() {
 	if len(os.Args) == 2 {
 		dialAddrs = local
 	}
+
 	fmt.Printf("COMENZANDO EL JUGADOR - Addr: %s\n", dialAddrs)
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
@@ -149,13 +150,19 @@ func Luces(c pb.LiderClient) error {
 			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumarizados")
 			fmt.Printf("Tus números de la suerte: Jugada: %v - Numero Jugador: %v\n", jugada.Jugada.Val, jugada.NumJugador)
 			break
+		} else if in2.GetTipo() == pb.EnvioJugada_Fin {
+			fmt.Printf("Se acabo el juego...por ahora\n")
+			break
+		} else if in2.GetTipo() == pb.EnvioJugada_NuevoJuego {
+			fmt.Printf("Cambiando de Etapa\n")
+			break
 		}
 	}
 	stream.CloseSend()
 	return nil
 }
 
-/*
+/*s
 func TirarCuerda(c pb.LiderClient) error {
 	var randval int32 = funcs.RandomInRange(1, 4)
 	fmt.Printf("Random Value: %v\n", randval)
