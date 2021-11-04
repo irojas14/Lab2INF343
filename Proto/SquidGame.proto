@@ -97,6 +97,7 @@ message EnvioJugada {
     RondaId numRonda = 5;    
     Jugada jugada = 6;
     ESTADO estado = 7;
+    int32 equipo = 8;
 }
 
 
@@ -151,6 +152,7 @@ message PaqueteJugada {
     JUEGO numJuego = 2;    
     RondaId numRonda = 3;
     Jugada jugada = 4;
+    ESTADO estado = 5;
 }
 
 message JugadasRonda {

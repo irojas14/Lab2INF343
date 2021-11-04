@@ -8,6 +8,8 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
+
+	pb "github.com/irojas14/Lab2INF343/Proto"
 )
 
 func RandomInRange(min int32, max int32) int32 {
@@ -93,3 +95,35 @@ func isError(err error) bool {
 func FormatInt32(n int32) string {
 	return strconv.FormatInt(int64(n), 10)
 }
+
+func Remove(slice []int32, num_jugador int32) []int32 {
+	s := GetIndexOf(slice, num_jugador)
+	return append(slice[:s], slice[s+1:]...)
+}
+
+func GetIndexOf(slice []int32, elem int32) int {
+	for i, e := range(slice) {
+		if (elem == e) {
+			return i
+		}
+	}
+	return -1
+}
+
+func FindEnvioJugada(slice []*pb.EnvioJugada, num_jugador int32) *pb.EnvioJugada {
+	for _, jug := range(slice) {
+		if (jug.NumJugador.Val == num_jugador) {
+			return jug
+		}
+	}
+	return nil
+}
+
+func ArraySum(array []int32) int32 {  
+	var result int32 = 0
+	for _, v := range array {  
+	result += v  
+	}  
+	return result  
+}
+

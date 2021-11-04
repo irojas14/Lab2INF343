@@ -26,6 +26,7 @@ var (
 	ClientNumJugador  pb.JugadorId
 	ClientNumRonda    pb.RondaId
 	ClientCurrentGame pb.JUEGO
+	ClienTeam int32
 )
 
 func main() {
@@ -79,9 +80,6 @@ func main() {
 // JUEGOS
 
 func Luces(c pb.LiderClient) error {
-	var randval int32 = funcs.RandomInRange(1, 10)
-	fmt.Printf("Random Value: %v\n", randval)
-
 	stream, err := c.EnviarJugada(context.Background())
 
 	if err != nil {
@@ -90,6 +88,9 @@ func Luces(c pb.LiderClient) error {
 	}
 
 	for {
+		var randval int32 = funcs.RandomInRange(1, 10)
+		fmt.Printf("Random Value: %v\n", randval)		
+		
 		jugada := pb.EnvioJugada{
 			Tipo:       pb.EnvioJugada_Jugada,
 			Rol:        pb.EnvioJugada_Jugador,
@@ -123,14 +124,26 @@ func Luces(c pb.LiderClient) error {
 
 		if in.GetEstado() == pb.ESTADO_Muerto {
 			fmt.Println("Muerto, Cerrando Stream y Volviendo")
-			break
+			stream.CloseSend()			
+			return nil
+
+		} else if in.Estado == pb.ESTADO_Ganador {
+
+			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumatizados")
+			fmt.Printf("Tus números de la suerte: Jugada: %v - Numero Jugador: %v\n", jugada.Jugada.Val, jugada.NumJugador)
+			stream.CloseSend()			
+			return nil
 		}
 
-		fmt.Println("Esperando Respuesta de Inicio de 2da Ronda")
+		fmt.Printf("Esperando Respuesta de Inicio de %v Ronda\n", in.NumRonda.Val+1)
+
+
+		// 2DA RESPUESTA
 		
 		in2, err2 := stream.Recv()
 
-		fmt.Println("Respuesta de 2da Ronda Recibida")
+		fmt.Printf("2da Respuesta Recibida: %v\n", in2.String())
+		//fmt.Printf("Respuesta de %v Ronda Recibida\n", in.NumRonda.Val+1)
 
 		if (err2 == io.EOF) {
 			log.Fatalf("Error EOF en in2: %v\n", err)
@@ -141,48 +154,146 @@ func Luces(c pb.LiderClient) error {
 			log.Fatalf("Error No EOF en in2: %v\n", err)
 			return err2
 		}
-
-		fmt.Println("Contenido 2da Respuesta: " + in2.String())
+		fmt.Println("Contenido Respuesta: " + in2.String())
 
 		if in2.GetTipo() == pb.EnvioJugada_NuevaRonda {
+
 			fmt.Println("Pasamos a la Siguiente Ronda")
+
 		} else if  in2.GetTipo() == pb.EnvioJugada_Ganador {
-			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumarizados")
+
+			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumatizados")
 			fmt.Printf("Tus números de la suerte: Jugada: %v - Numero Jugador: %v\n", jugada.Jugada.Val, jugada.NumJugador)
 			break
+
 		} else if in2.GetTipo() == pb.EnvioJugada_Fin {
-			fmt.Printf("Se acabo el juego...por ahora\n")
-			break
+			if (in2.Estado == pb.ESTADO_Muerto) {
+
+				fmt.Println("Muerto, Cerrando Stream y Volviendo")				
+			} else {
+
+				fmt.Printf("Se acabó el juego...por ahora\n")
+			}
+			stream.CloseSend()			
+			return nil			
+
 		} else if in2.GetTipo() == pb.EnvioJugada_NuevoJuego {
 			fmt.Printf("Cambiando de Etapa\n")
+			ClienTeam = in2.Equipo
+			ClientNumRonda =  *in2.GetNumRonda()
 			break
+			
 		}
+		fmt.Println()
+		fmt.Println()
 	}
-	stream.CloseSend()
+	fmt.Println("Yendo a la 2da Etapa: Tirar la Cuerda")
+	TirarCuerda(c, stream)
 	return nil
 }
 
-/*s
-func TirarCuerda(c pb.LiderClient) error {
-	var randval int32 = funcs.RandomInRange(1, 4)
-	fmt.Printf("Random Value: %v\n", randval)
+func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 
-	r, err := c.EnviarJugada(context.Background(), &pb.SolicitudEnviarJugada{
-		JugadaInfo: &pb.PaqueteJugada{
-			NumJugador: &pb.JugadorId{Val: ClientNumJugador.Val},
-			NumJuego:   ClientCurrentGame,
-			NumRonda:   &pb.RondaId{Val: ClientNumRonda.Val},
-			Jugada:     &pb.Jugada{Val: randval}}})
+	fmt.Println("En el Juego 2: Tirar la Cuerda!!")
+	for {
+		var randval int32 = funcs.RandomInRange(1, 4)
+		fmt.Printf("Random Value: %v\n", randval)		
+		
+		jugada := pb.EnvioJugada{
+			Tipo:       pb.EnvioJugada_Jugada,
+			Rol:        pb.EnvioJugada_Jugador,
+			NumJuego:   pb.JUEGO_TirarCuerda,
+			NumRonda:   &ClientNumRonda,
+			NumJugador: &ClientNumJugador,
+			Jugada:     &pb.Jugada{Val: randval},
+			Equipo: ClienTeam,
+		}
 
-	if err != nil {
-		log.Fatalf("Error al jugar tirar cierda: %v\n", err)
-		return err
+		fmt.Printf("Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
+		
+		stream.Send(&jugada)
+
+		fmt.Println("Jugada Enviada, Esperando Resolución")
+
+		in, err := stream.Recv()
+
+		fmt.Println("Resolución Recibida")
+
+		if err == io.EOF {
+			log.Fatalf("END OF FILE: %v\n", err)
+			return nil
+		}
+
+		if err != nil {
+			log.Fatalf("Error No EOF: %v\n", err)
+			return err
+		}
+
+		fmt.Printf("Respuesta Jugada: %v - Estado: %v\n", in.String(), in.Estado.String())
+
+		if in.Estado == pb.ESTADO_Muerto {
+			fmt.Println("Muerto, Cerrando Stream y Volviendo")
+			stream.CloseSend()			
+			return nil
+
+		} else if in.Estado == pb.ESTADO_Ganador {
+
+			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumatizados")
+			fmt.Printf("Tus números de la suerte: Jugada: %v - Numero Jugador: %v\n", jugada.Jugada.Val, jugada.NumJugador)
+			stream.CloseSend()			
+			return nil
+		}
+
+		fmt.Println("Esperando Respuesta de Inicio de Nueva Etapa")
+
+		in2, err2 := stream.Recv()
+
+		fmt.Printf("2da Respuesta Recibida: %v\n", in2.String())
+		//fmt.Printf("Respuesta de %v Ronda Recibida\n", in.NumRonda.Val+1)
+
+		if (err2 == io.EOF) {
+			log.Fatalf("Error EOF en in2: %v\n", err)
+			return err2			
+		}
+
+		if err2 != nil {
+			log.Fatalf("Error No EOF en in2: %v\n", err)
+			return err2
+		}
+		fmt.Println("Contenido Respuesta: " + in2.String())
+
+		if in2.GetTipo() == pb.EnvioJugada_NuevaRonda {
+
+			fmt.Println("Pasamos a la Siguiente Ronda")
+
+		} else if  in2.GetTipo() == pb.EnvioJugada_Ganador {
+
+			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumatizados")
+			fmt.Printf("Tus números de la suerte: Jugada: %v - Numero Jugador: %v\n", jugada.Jugada.Val, jugada.NumJugador)
+			break
+
+		} else if in2.GetTipo() == pb.EnvioJugada_Fin {
+
+			fmt.Printf("Se acabó el juego...por ahora\n")
+			break
+
+		} else if in2.GetTipo() == pb.EnvioJugada_NuevoJuego {
+			fmt.Printf("Cambiando de Etapa\n")
+			fmt.Println()
+			fmt.Println()						
+			
+			ClienTeam = in2.Equipo
+			ClientNumRonda =  *in2.GetNumRonda()
+			break
+			
+		}
+		fmt.Println()
+		fmt.Println()
+
+
 	}
-	fmt.Printf("Respuesta Jugada: %v", r.String())
-	waitc <- "done"
 	return nil
 }
-*/
 
 // AUXILIAR
 
