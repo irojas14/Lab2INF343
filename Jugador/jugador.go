@@ -28,8 +28,6 @@ var (
 	ClientCurrentGame pb.JUEGO
 )
 
-var waitc chan string = make(chan string)
-
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	dialAddrs := address
@@ -45,9 +43,6 @@ func main() {
 	defer conn.Close()
 	c := pb.NewLiderClient(conn)
 
-	//ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	//defer cancel()
-
 	stream, err := c.Unirse(context.Background(), &pb.SolicitudUnirse{})
 
 	if err != nil {
@@ -55,7 +50,9 @@ func main() {
 		return
 	}
 	for {
+		fmt.Println("A Recibir datos de Unirse del Lider")
 		r, err := stream.Recv()
+		fmt.Println("Información Recibida")	
 		if err == io.EOF {
 			break
 		}
@@ -86,16 +83,9 @@ func Luces(c pb.LiderClient) error {
 
 	stream, err := c.EnviarJugada(context.Background())
 
-	/*
-		JugadaInfo: &pb.PaqueteJugada{
-			NumJugador: &pb.JugadorId{Val: ClientNumJugador.Val},
-			NumJuego:   ClientCurrentGame,
-			NumRonda:   &pb.RondaId{Val: ClientNumRonda.Val},
-			Jugada:     &pb.Jugada{Val: randval}}})
-	*/
-
 	if err != nil {
-		return nil
+		log.Fatalf("Error al Enviar Jugada Stream: %v\n", err)
+		return err
 	}
 
 	for {
@@ -108,12 +98,15 @@ func Luces(c pb.LiderClient) error {
 			Jugada:     &pb.Jugada{Val: randval},
 		}
 
-		fmt.Printf("Enviando Jugada al Lider: %v\n", jugada.Jugada)
+		fmt.Printf("Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
+		
 		stream.Send(&jugada)
 
 		fmt.Println("Jugada Enviada, Esperando Resolución")
 
 		in, err := stream.Recv()
+
+		fmt.Println("Resolución Recibida")
 
 		if err == io.EOF {
 			log.Fatalf("END OF FILE: %v\n", err)
@@ -129,17 +122,36 @@ func Luces(c pb.LiderClient) error {
 
 		if in.GetEstado() == pb.ESTADO_Muerto {
 			fmt.Println("Muerto, Cerrando Stream y Volviendo")
-			stream.CloseSend()
-			return nil
+			break
 		}
 
-		in2, err := stream.Recv()
+		fmt.Println("Esperando Respuesta de Inicio de 2da Ronda")
+		
+		in2, err2 := stream.Recv()
+
+		fmt.Println("Respuesta de 2da Ronda Recibida")
+
+		if (err2 == io.EOF) {
+			log.Fatalf("Error EOF en in2: %v\n", err)
+			return err2			
+		}
+
+		if err2 != nil {
+			log.Fatalf("Error No EOF en in2: %v\n", err)
+			return err2
+		}
+
+		fmt.Println("Contenido 2da Respuesta: " + in2.String())
 
 		if in2.GetTipo() == pb.EnvioJugada_NuevaRonda {
 			fmt.Println("Pasamos a la Siguiente Ronda")
+		} else if  in2.GetTipo() == pb.EnvioJugada_Ganador {
+			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumarizados")
+			fmt.Printf("Tus números de la suerte: Jugada: %v - Numero Jugador: %v\n", jugada.Jugada.Val, jugada.NumJugador)
+			break
 		}
 	}
-	//waitc <- "done"
+	stream.CloseSend()
 	return nil
 }
 

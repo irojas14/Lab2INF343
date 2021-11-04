@@ -84,6 +84,7 @@ message EnvioJugada {
         NuevaRonda = 2;
         NuevoJuego = 3;
         Fin = 4;
+        Ganador = 5;
     }
     enum ROLES {
         Jugador = 0;
