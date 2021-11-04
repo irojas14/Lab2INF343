@@ -44,6 +44,7 @@ enum ESTADO {
     Muerto = 0;
     Vivo = 1;
     Ganador = 2;
+    MuertoDefault = 3;
 }
 
 
