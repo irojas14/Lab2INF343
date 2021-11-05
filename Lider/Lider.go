@@ -78,6 +78,13 @@ var (
 	JugadoresMux sync.Mutex
 )
 
+// Variables 3er Juego "Todo o Nada"
+
+var (
+	AllTeams       [][]int32
+	AllTeamsValues [][]int32
+)
+
 type server struct {
 	pb.UnimplementedLiderServer
 }
@@ -404,6 +411,8 @@ func Update() {
 
 		} else if JuegoActual == pb.JUEGO_TirarCuerda {
 			JuegoTirarCuerdaWaitForResponses()
+		} else if JuegoActual == pb.JUEGO_TodoNada {
+			JuegoTodoNadaWaitForResponses()
 		}
 	}
 }
@@ -555,55 +564,68 @@ func JuegoTirarCuerdaWaitForResponses() {
 
 	var vivos []*pb.EnvioJugada
 
-	if team1res {
-		fmt.Println("TEAM 1 VIVO")
+	if team1res && team2res {
 
-		for _, num_jugador := range Team1 {
-			jug := funcs.FindEnvioJugada(Jugadas, num_jugador)
+		for _, jug := range Jugadas {
 
 			jug.Tipo = pb.EnvioJugada_Jugada
 			jug.Estado = pb.ESTADO_Vivo
-			vivos = append(vivos, jug)
-		}
-	}
-	if team2res {
-		fmt.Println("TEAM 2 VIVO")
 
-		for _, num_jugador := range Team2 {
-			jug := funcs.FindEnvioJugada(Jugadas, num_jugador)
-
-			jug.Tipo = pb.EnvioJugada_Jugada
-			jug.Estado = pb.ESTADO_Vivo
 			vivos = append(vivos, jug)
 		}
 
-	}
+	} else if team1res != team2res {
 
-	if !team1res && !team2res {
+		fmt.Printf("Team 1: %v - Team 2: %v - Matando al Muerto\n", team1res, team2res)
 
-		fmt.Println("AMBOS MAL! ELIGIENDO AL AZAR")
-		election := funcs.RandomInRange(1, 2)
-
-		var selTeam []int32
-		if election == 1 {
-			selTeam = Team1
+		var election int32
+		if team1res {
+			election = 1
 		} else {
-			selTeam = Team2
+			election = 2
 		}
 
-		fmt.Printf("TEAM ELEGIDO GANADOR: %v -> %v\n", election, selTeam)
+		fmt.Printf("El election: %v\n", election)
 
 		for _, jug := range Jugadas {
 			jug.Tipo = pb.EnvioJugada_Jugada
 
-			indexres := funcs.GetIndexOf(selTeam, jug.NumJugador.Val)
-			if indexres != -1 {
+			fmt.Printf("Jugada: %v\n", jug.String())
 
+			if jug.Equipo == election {
+
+				fmt.Printf("Estoy vivo: Jugador: %v\n", jug.NumJugador)
 				jug.Estado = pb.ESTADO_Vivo
 
 				vivos = append(vivos, jug)
 			} else {
+				fmt.Printf("Matando Jugador: %v\n", jug.NumJugador)
+				jug.Estado = pb.ESTADO_Muerto
 
+				CurrentAlivePlayers--
+				Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
+			}
+		}
+
+	} else if !team1res && !team2res {
+
+		fmt.Println("AMBOS MAL! ELIGIENDO AL AZAR")
+		election := funcs.RandomInRange(1, 2)
+
+		fmt.Printf("TEAM ELEGIDO GANADOR: %v\n", election)
+
+		for _, jug := range Jugadas {
+			jug.Tipo = pb.EnvioJugada_Jugada
+
+			fmt.Printf("Jugada: %v\n", jug.String())
+
+			if jug.Equipo == election {
+				fmt.Printf("Jugador Vivo: %v\n", jug.NumJugador)
+				jug.Estado = pb.ESTADO_Vivo
+
+				vivos = append(vivos, jug)
+			} else {
+				fmt.Printf("Matando Jugador: %v\n", jug.NumJugador)
 				jug.Estado = pb.ESTADO_Muerto
 
 				CurrentAlivePlayers--
@@ -653,9 +675,66 @@ func JuegoTirarCuerdaCleanAndReset() {
 
 func JuegoTirarCuerdaEndingCleaning() {
 	BasicCleaning()
+	jugadorEliminado = -1
 }
 
 // FUNCIONES TODO O NADA
+
+func JuegoTodoNadaWaitForResponses() {
+
+	fmt.Println("Processando Todo o Nada")
+
+	<-serverGameProcessingChan
+
+	var liderVal int32 = 0
+	var vivos []*pb.EnvioJugada
+
+	// Revisamos si es que murieron todos o si queda un jugador
+	RevisarSiFinDeJuego(vivos)
+
+	// Debemos avisar a los clientes que esperan que el procesamiento esta listo
+	// hay que avisarle a cada uno, por medio del channel "gamerLiderValChan"
+	AvisarRespuestaLiderLista(liderVal)
+
+	// NEXT - ESPERAMOS SE HAYAN ENVIADO LAS RESPUESTAS A TODOS LOS CLIENTES PARA LIMPIAR
+	<-waitingForCleaning
+
+	if JuegoActual != pb.JUEGO_None {
+
+		JuegoTodoNadaCleanAndReset()
+	} else {
+
+		fmt.Println("Nos Vamos")
+		JuegoTodoNadaEndingCleaning()
+	}
+
+}
+
+func JuegoTodoNadaCleanAndReset() {
+
+	// 1ERA, 2DA, 3RA PARTE
+	// Reiniciamos ResponsesCount, RepliesCount
+	BasicCleaning()
+
+	// Cleaning TODO o NADA
+
+	liderMsg := "FIN"
+
+	// 6TA PARTE - ESPERANDO SEÑAL DEL LIDER
+	// Dependiendo de la ronda imprimimos un diferente mensaje
+	EsperarAvisoLider(liderMsg)
+
+	// 7RA PARTE - INFORMAR A LOS CLIENTES QUE ESTAN ESPERANDO
+	var waitingResponse int32 = 1
+	AvisarTerminoCleanAndReset(waitingResponse)
+}
+
+func JuegoTodoNadaEndingCleaning() {
+
+	// 1ERA, 2DA, 3RA PARTE
+	// Reiniciamos ResponsesCount, RepliesCount
+	BasicCleaning()
+}
 
 // FUNCIONES COMUNES ----------------------------------------------------------------------------------------------------------------------------
 
@@ -736,6 +815,7 @@ func EsperarAvisoLider(liderMsg string) {
 }
 
 func CambiarEtapa(nEtapa pb.JUEGO) {
+	var n, m int
 	fmt.Printf("EstadoActual: %v - Nuevo: %v\n", JuegoActual, nEtapa)
 	jugadorEliminado = -1
 
@@ -779,6 +859,41 @@ func CambiarEtapa(nEtapa pb.JUEGO) {
 		fmt.Printf("TEAM 2: %v\n", Team2)
 
 	} else if JuegoActual == pb.JUEGO_TodoNada {
+		fmt.Println("CAMBIANDO Y PREPARANDO JUEGO TODO O NADA")
+
+		rand.Seed(time.Now().UnixNano())
+		rand.Shuffle(len(Jugadores), func(i, j int) { Jugadores[i], Jugadores[j] = Jugadores[j], Jugadores[i] }) // se desordenan
+		var largo_jugadores int = len(Jugadores)
+		if largo_jugadores%2 == 1 {
+			jugadorEliminado = Jugadores[0]
+			fmt.Printf("Al apretar enter en la siguiente ronda se eliminara por azares el jugador:%v\n", jugadorEliminado)
+			CurrentAlivePlayers--
+			largo_jugadores--
+			Jugadores = Jugadores[1:] //elimina el primero (despues del shuffle por lo que igual es random)
+		}
+		//Creando equipos:
+		n = largo_jugadores / 2
+		m = 2
+		AllTeams := make([][]int32, n)
+		for i := range AllTeams {
+			AllTeams[i] = make([]int32, m)
+		}
+		AllTeamsValues := make([][]int32, n)
+		for i := range AllTeamsValues {
+			AllTeamsValues[i] = make([]int32, m)
+		}
+		for i := 0; i < largo_jugadores; i = i + 2 {
+			AllTeams[i/2][0] = Jugadores[i]
+			AllTeams[i/2][1] = Jugadores[i+1]
+		}
+		//Mostrando equipos creados:
+		for i := 0; i < len(AllTeams); i++ {
+			fmt.Printf("Team %v: [ ", i+1)
+			for j := 0; j < len(AllTeams[i]); j++ {
+				fmt.Printf("%v ", AllTeams[i][j])
+			}
+			fmt.Println("]")
+		}
 
 	} else if JuegoActual == pb.JUEGO_Fin {
 
