@@ -276,15 +276,12 @@ func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 }
 
 func JuegoTodoONada(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
-	fmt.Println("EN TODO O NADA")
-
-	fmt.Printf("CurrentJuego: : %v\n", ClientCurrentGame)
 
 	for {
 		var randval int32 = funcs.RandomInRange(1, 10)
 		fmt.Printf("Random Value: %v\n", randval)
 
-		jugada := &pb.EnvioJugada{
+		jugada := pb.EnvioJugada{
 			Tipo:       pb.EnvioJugada_Jugada,
 			Rol:        pb.EnvioJugada_Jugador,
 			NumJuego:   pb.JUEGO_TodoNada,
@@ -294,37 +291,100 @@ func JuegoTodoONada(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error 
 			Equipo:     ClienTeam,
 		}
 
-		fmt.Printf("Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
+		fmt.Printf("TODO O NADA -> Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
 
-		stream.Send(jugada)
+		stream.Send(&jugada)
 
 		fmt.Println("Jugada Enviada, Esperando Resolución")
 
 		in, err := stream.Recv()
-		reterr, tipo := ProcesarRespuesta(stream, in, err, jugada)
 
-		if tipo == TipoRespuesta_EOF {
-			break
-		}
-		if tipo == TipoRespuesta_Error || tipo == TipoRespuesta_Terminar {
-			return reterr
+		fmt.Println("Resolución Recibida")
 
-		} else if tipo == TipoRespuesta_NuevaEtapa {
-			break
+		if err == io.EOF {
+			log.Fatalf("END OF FILE: %v\n", err)
+			return nil
 		}
+
+		if err != nil {
+			log.Fatalf("Error No EOF: %v\n", err)
+			return err
+		}
+
+		fmt.Printf("Respuesta Jugada: %v - Etapa: %v - Estado: %v\n", in.String(), ClientCurrentGame, in.Estado.String())
+
+		if in.GetEstado() == pb.ESTADO_MuertoDefault {
+			fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
+			stream.CloseSend()
+			return nil
+		} else if in.GetEstado() == pb.ESTADO_Muerto {
+			fmt.Println("Muerto, Cerrando Stream y Volviendo")
+			stream.CloseSend()
+			return nil
+		} else if in.Estado == pb.ESTADO_Ganador {
+
+			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumatizados")
+			fmt.Printf("Tus números de la suerte: Jugada: %v - Numero Jugador: %v\n", jugada.Jugada.Val, jugada.NumJugador)
+			stream.CloseSend()
+			return nil
+		}
+		if in.NumRonda.Val+2 >= 5 {
+			fmt.Printf("Esperando Respuesta de Inicio de juego: Tirar cuerda. \n")
+		} else {
+			fmt.Printf("Esperando Respuesta de Inicio de %v Ronda\n", in.NumRonda.Val+2)
+		}
+
+		// 2DA RESPUESTA
 
 		in2, err2 := stream.Recv()
-		reterr2, tipo2 := ProcesarRespuesta(stream, in2, err2, jugada)
 
-		if tipo2 == TipoRespuesta_EOF {
+		fmt.Printf("2da Respuesta Recibida Etapa: %v -> %v \n", in2.NumJuego, in2.String())
+		//fmt.Printf("Respuesta de %v Ronda Recibida\n", in.NumRonda.Val+1)
+
+		if err2 == io.EOF {
+			log.Fatalf("Error EOF en in2: %v\n", err)
+			return err2
+		}
+
+		if err2 != nil {
+			log.Fatalf("Error No EOF en in2: %v\n", err)
+			return err2
+		}
+		fmt.Println("Contenido Respuesta: " + in2.String())
+
+		if in2.Tipo == pb.EnvioJugada_NuevaRonda {
+
+			fmt.Println("Pasamos a la Siguiente Ronda")
+
+		} else if in2.Tipo == pb.EnvioJugada_Ganador {
+
+			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumatizados")
+			fmt.Printf("Tus números de la suerte: Jugada: %v - Numero Jugador: %v\n", jugada.Jugada.Val, jugada.NumJugador)
+			break
+
+		} else if in2.Tipo == pb.EnvioJugada_Fin {
+			if in2.Estado == pb.ESTADO_Muerto {
+
+				fmt.Println("Muerto, Cerrando Stream y Volviendo")
+			} else if in2.Estado == pb.ESTADO_MuertoDefault {
+				fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
+
+			} else {
+
+				fmt.Printf("Se acabó el juego...por ahora\n")
+			}
+			stream.CloseSend()
+			return nil
+
+		} else if in2.Tipo == pb.EnvioJugada_NuevoJuego {
+			fmt.Printf("Cambiando de Etapa\n")
+			ClientCurrentGame = in2.NumJuego
+			ClienTeam = in2.Equipo
+			ClientNumRonda = *in2.GetNumRonda()
 			break
 		}
-		if tipo2 == TipoRespuesta_Error || tipo2 == TipoRespuesta_Terminar {
-			return reterr2
-
-		} else if tipo2 == TipoRespuesta_NuevaEtapa {
-			break
-		}
+		fmt.Println()
+		fmt.Println()
 	}
 	return nil
 }
