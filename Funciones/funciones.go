@@ -127,3 +127,10 @@ func ArraySum(array []int32) int32 {
 	}
 	return result
 }
+
+func Absoluto(n int32) int32 {
+	if n > 0 {
+		return n
+	}
+	return -1 * n
+}

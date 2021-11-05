@@ -120,7 +120,7 @@ func Luces(c pb.LiderClient) error {
 			return err
 		}
 
-		fmt.Printf("Respuesta Jugada: %v - Estado: %v\n", in.String(), in.Estado.String())
+		fmt.Printf("Respuesta Jugada: %v - Etapa: %v - Estado: %v\n", in.String(), ClientCurrentGame, in.Estado.String())
 
 		if in.GetEstado() == pb.ESTADO_MuertoDefault {
 			fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
@@ -147,7 +147,7 @@ func Luces(c pb.LiderClient) error {
 
 		in2, err2 := stream.Recv()
 
-		fmt.Printf("2da Respuesta Recibida: %v\n", in2.String())
+		fmt.Printf("2da Respuesta Recibida Etapa: %v -> %v \n", in2.NumJuego, in2.String())
 		//fmt.Printf("Respuesta de %v Ronda Recibida\n", in.NumRonda.Val+1)
 
 		if err2 == io.EOF {
@@ -187,6 +187,7 @@ func Luces(c pb.LiderClient) error {
 
 		} else if in2.GetTipo() == pb.EnvioJugada_NuevoJuego {
 			fmt.Printf("Cambiando de Etapa\n")
+			ClientCurrentGame = in2.NumJuego
 			ClienTeam = in2.Equipo
 			ClientNumRonda = *in2.GetNumRonda()
 			break
@@ -216,7 +217,7 @@ func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 			Equipo:     ClienTeam,
 		}
 
-		fmt.Printf("Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
+		fmt.Printf("Enviando Jugada al Lider: %v - Jugador: %v - Etapa Client: %v - Etapa Jugada: %v\n", jugada.Jugada, ClientNumJugador.Val, ClientCurrentGame, jugada.NumJuego)
 
 		stream.Send(jugada)
 
@@ -236,7 +237,7 @@ func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 			return err
 		}
 
-		fmt.Printf("Respuesta Jugada: %v - Estado: %v\n", in.String(), in.Estado.String())
+		fmt.Printf("Respuesta Jugada: %v - Estado: %v - Client Etapa %v - in Etapa: %v\n", in.String(), in.Estado.String(), ClientCurrentGame, in.NumJuego)
 
 		if in.Estado == pb.ESTADO_Muerto {
 			fmt.Println("Muerto, Cerrando Stream y Volviendo")
@@ -269,10 +270,62 @@ func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 			break
 		}
 	}
-	var linea string
-	fmt.Println("Nos iríamos a la 3ra Etapa: Esperando input")
-	fmt.Scanln(&linea)
-	// Sgte Etapa
+	fmt.Println("Yendo a la 3ra Etapa: Todo o Nada")
+	JuegoTodoONada(c, stream)
+	return nil
+}
+
+func JuegoTodoONada(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
+	fmt.Println("EN TODO O NADA")
+
+	fmt.Printf("CurrentJuego: : %v\n", ClientCurrentGame)
+
+	for {
+		var randval int32 = funcs.RandomInRange(1, 10)
+		fmt.Printf("Random Value: %v\n", randval)
+
+		jugada := &pb.EnvioJugada{
+			Tipo:       pb.EnvioJugada_Jugada,
+			Rol:        pb.EnvioJugada_Jugador,
+			NumJuego:   pb.JUEGO_TodoNada,
+			NumRonda:   &ClientNumRonda,
+			NumJugador: &ClientNumJugador,
+			Jugada:     &pb.Jugada{Val: randval},
+			Equipo:     ClienTeam,
+		}
+
+		fmt.Printf("Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
+
+		stream.Send(jugada)
+
+		fmt.Println("Jugada Enviada, Esperando Resolución")
+
+		in, err := stream.Recv()
+		reterr, tipo := ProcesarRespuesta(stream, in, err, jugada)
+
+		if tipo == TipoRespuesta_EOF {
+			break
+		}
+		if tipo == TipoRespuesta_Error || tipo == TipoRespuesta_Terminar {
+			return reterr
+
+		} else if tipo == TipoRespuesta_NuevaEtapa {
+			break
+		}
+
+		in2, err2 := stream.Recv()
+		reterr2, tipo2 := ProcesarRespuesta(stream, in2, err2, jugada)
+
+		if tipo2 == TipoRespuesta_EOF {
+			break
+		}
+		if tipo2 == TipoRespuesta_Error || tipo2 == TipoRespuesta_Terminar {
+			return reterr2
+
+		} else if tipo2 == TipoRespuesta_NuevaEtapa {
+			break
+		}
+	}
 	return nil
 }
 
@@ -296,12 +349,14 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 		log.Fatalf("END OF FILE: %v\n", err)
 		tipo = TipoRespuesta_EOF
 		reterr = nil
+		return reterr, tipo
 	}
 
 	if err != nil {
 		log.Fatalf("Error No EOF: %v\n", err)
 		tipo = TipoRespuesta_Error
 		reterr = err
+		return reterr, tipo
 	}
 
 	fmt.Printf("Respuesta Jugada: %v - Estado: %v\n", in.String(), in.Estado.String())
@@ -311,12 +366,14 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 		stream.CloseSend()
 		tipo = TipoRespuesta_Terminar
 		reterr = nil
+		return reterr, tipo
 
 	} else if in.Estado == pb.ESTADO_MuertoDefault {
 		fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
 		stream.CloseSend()
 		tipo = TipoRespuesta_Terminar
 		reterr = nil
+		return reterr, tipo
 
 	} else if in.Estado == pb.ESTADO_Ganador || in.Tipo == pb.EnvioJugada_Ganador {
 
@@ -325,6 +382,7 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 		stream.CloseSend()
 		tipo = TipoRespuesta_Terminar
 		reterr = nil
+		return reterr, tipo
 	}
 
 	if in.Tipo == pb.EnvioJugada_NuevaRonda {
@@ -338,12 +396,15 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 		fmt.Printf("Se acabó el juego...por ahora\n")
 		tipo = TipoRespuesta_Terminar
 		reterr = nil
+		stream.CloseSend()
+		return reterr, tipo
 
 	} else if in.Tipo == pb.EnvioJugada_NuevoJuego {
 		fmt.Printf("Cambiando de Etapa\n")
 		fmt.Println()
 		fmt.Println()
 
+		ClientCurrentGame = in.NumJuego
 		ClienTeam = in.Equipo
 		ClientNumRonda = *in.GetNumRonda()
 		tipo = TipoRespuesta_NuevaEtapa
