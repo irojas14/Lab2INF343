@@ -291,7 +291,7 @@ func JuegoTodoONada(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error 
 			Equipo:     ClienTeam,
 		}
 
-		fmt.Printf("TODO O NADA -> Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
+		fmt.Printf("Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
 
 		stream.Send(&jugada)
 
