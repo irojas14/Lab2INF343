@@ -164,7 +164,7 @@ message JugadasJuego {
 
 message JugadasJugador {
     JugadorId numJugador = 1;
-    repeated JugadasJuego jugadasRonda = 2;
+    repeated JugadasJuego jugadasJuego = 2;
 }
 
 message JugadasJuegoJugador {

@@ -76,7 +76,6 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 		//items[2] = ip_datanode
 		if items[0] == "Jugador_" + funcs.FormatInt32(numjugador) {
 			fmt.Println(items)
-
 			conn, err := grpc.Dial(items[2], grpc.WithInsecure(), grpc.WithBlock())
 			if err != nil {
 				log.Fatalf("did not connect: %v", err)
@@ -96,7 +95,7 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 			//r.JugadasJugador.NumJugador.GetVal()
 			//r.JugadasJugador.JugadasRonda[0].NumRonda.GetVal()
 			//r.JugadasJugador.JugadasRonda[0].Jugadas[0].GetVal()
-			res.JugadasRonda = append(res.JugadasRonda, r.JugadasJugador.JugadasRonda[0])
+			res.JugadasJuego = append(res.JugadasJuego, r.JugadasJugador.JugadasJuego[0])
 		}
 	}
 	return res, nil
@@ -141,7 +140,7 @@ func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJu
 
 func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) error {
 	jugador := jugadasEnv.NumJugador.Val
-	ronda := jugadasEnv.JugadasRonda[0].NumRonda.Val
+	juego := jugadasEnv.JugadasJuego[0].NumJuego
 
 	file, err := os.OpenFile(nameNodeFile, os.O_APPEND|os.O_WRONLY, 0777)
 
@@ -154,9 +153,9 @@ func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) err
 	//Jugador 1 Ronda 1 10.0.1.10
 
 	jugadorStr := strconv.FormatInt(int64(jugador), 10)
-	rondaStr := strconv.FormatInt(int64(ronda), 10)
+	rondaStr := strconv.FormatInt(int64(juego), 10)
 
-	var linea string = "Jugador " + jugadorStr + " Ronda " + rondaStr + " " + selDataNodeAddrs + "\n"
+	var linea string = "Jugador " + jugadorStr + " Etapa " + rondaStr + " " + selDataNodeAddrs + "\n"
 	fmt.Printf("Linea registro: %v\n", linea)
 	
 	_, err2 := file.WriteString(linea)

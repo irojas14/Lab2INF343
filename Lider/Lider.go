@@ -1026,16 +1026,17 @@ func EnviarJugadasANameNode() {
 	for _, jug := range (Jugadas) {
 
 		jugadasArray := []*pb.Jugada{jug.Jugada}
-		jugRondaArray := []*pb.JugadasRonda{
+		jugJuegoArray := []*pb.JugadasJuego {
 			{
-				NumRonda: &pb.RondaId{Val: CurrentRonda},
+				NumJuego: JuegoActual,
 				Jugadas: jugadasArray,
-			}}
+			},
+		}
 
 		SolicitudDeRegistro := &pb.SolicitudRegistrarJugadas{
 			JugadasJugador: &pb.JugadasJugador{
 				NumJugador: jug.NumJugador,
-				JugadasRonda: jugRondaArray,
+				JugadasJuego: jugJuegoArray,
 			},
 		}
 
