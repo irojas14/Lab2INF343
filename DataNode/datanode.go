@@ -17,7 +17,7 @@ const (
 	dn2Port = ":50056"
 	dn3Port = ":50057"
 	local = "localhost"
-	dn1Addrs = "dist150.inf.santiago.usm.cl" + dn1Port
+	dn1Addrs = "dist149.inf.santiago.usm.cl" + dn1Port
 	dn2Addrs = "dist151.inf.santiago.usm.cl" + dn1Port
 	dn3Addrs = "dist152.inf.santiago.usm.cl" + dn1Port
 )

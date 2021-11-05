@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,12 +18,12 @@ import (
 const (
 	port    = ":50054"
 	local   = "localhost" + port
-	address = "dist149.inf.santiago.usm.cl" + port
+	address = "dist150.inf.santiago.usm.cl" + port
 )
 
 const (
 	dnPort = ":50055"
-	dn1Addrs = "dist150.inf.santiago.usm.cl" + dnPort
+	dn1Addrs = "dist149.inf.santiago.usm.cl" + dnPort
 	dn2Addrs = "dist151.inf.santiago.usm.cl" + dnPort
 	dn3Addrs = "dist152.inf.santiago.usm.cl" + dnPort
 )
@@ -96,12 +97,26 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 	return res, nil
 }
 
-
 func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrarJugadas) (*pb.RespuestaRegistrarJugadas, error) {
     log.Println("Sirviendo Solicitud de Registrar Jugada")
 
 	// Elegir un Datanode y guarda la info
-	// creado un DataNodeClient y usando la RPC DataNode.RegistrarJugadas.
+	// creado un DataNodeClient y usando la RPC DataNode.RegistrarJugadas
+
+	// Elegimos un DataNode al Azar
+	selDataNode := curAddrs[2];
+	election := funcs.RandomInRange(1, 3)
+	if (election == 1) {
+		selDataNode = curAddrs[0]
+	} else if (election == 2) {
+		selDataNode = curAddrs[1]
+	}
+
+	// Escribirmos el Registro
+	AgregarRegistro(in.JugadasJugador, selDataNode)
+
+
+
 
     return &pb.RespuestaRegistrarJugadas{ NumJugador: &pb.JugadorId{Val: in.JugadasJugador.NumJugador.Val} }, nil
 }
@@ -117,6 +132,42 @@ func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJu
 		return nil, err;
 	}
 	return &pb.RespuestaDevolverJugadas{JugadasJugador: jj}, nil
+}
+
+func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) error {
+	jugador := jugadasEnv.NumJugador.Val
+	ronda := jugadasEnv.JugadasRonda[0].NumRonda.Val
+
+	file, err := os.OpenFile("registro", os.O_APPEND|os.O_WRONLY, 0777)
+
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+	defer file.Close()
+	
+	//Jugador 1 Ronda 1 10.0.1.10
+
+	jugadorStr := strconv.FormatInt(int64(jugador), 10)
+	rondaStr := strconv.FormatInt(int64(ronda), 10)
+	
+	//s1 := strconv.FormatInt(int64(i), 10)
+	//s2 := strconv.Itoa(i)
+
+	var linea string = "Jugador " + jugadorStr + " Ronda " + rondaStr + " " + selDataNodeAddrs + "\n"
+	fmt.Printf("Linea registro: %v\n", linea)
+	
+	_, err2 := file.WriteString(linea)
+
+	if (err2 != nil ) {
+		log.Fatalf("Error al escribir registro: %v\n", err2)
+		return err2
+	}
+	return nil
+}
+
+func AlmacenamientoDataNode(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) {
+	
 }
 
 func main() {	

@@ -29,7 +29,7 @@ func CrearArchivoTxt(NombreDelArchivo string) {
 		defer file.Close()
 	}
 
-	fmt.Println("File Created Successfully", NombreDelArchivo)
+	fmt.Println("Se crea el archivo llamado: ", NombreDelArchivo)
 }
 
 func InsertarJugadasDelJugador(NombreDelArchivo string, JugadasDelJugador []int32) {
@@ -134,3 +134,13 @@ func Absoluto(n int32) int32 {
 	}
 	return -1 * n
 }
+
+/*
+func itos(int32) string {
+	i := 10
+	s1 := strconv.FormatInt(int64(i), 10)
+	s2 := strconv.Itoa(i)
+	return s2
+	fmt.Printf("%v, %v\n", s1, s2)
+}
+*/

@@ -17,10 +17,14 @@ import (
 	"google.golang.org/grpc"
 )
 
+// Direcciones
+
 const (
 	MaxPlayers      = 8
-	nameNodeAddress = "dist152.inf.santiago.usm.cl:50050"
-	pozoAddress     = "dist150.inf.santiago.usm.cl:50051"
+	nameNodeAddress = "dist150.inf.santiago.usm.cl:50054"
+	nPort = ":50054"
+	pozoAddress     = "dist151.inf.santiago.usm.cl:50051"
+	pPort = ":50051"
 	sPort           = ":50052"
 	address         = "dist149.inf.santiago.usm.cl" + sPort
 	local           = "localhost" + sPort
@@ -62,6 +66,14 @@ var (
 	Jugadas    []*pb.EnvioJugada
 	JugadasMux sync.Mutex
 )
+
+
+// Variables 1er Juego "Luces"
+
+var (
+	SumasJugadores  []int32
+)
+
 
 // Variables 2do Juego "Tirar la Cuerda"
 
@@ -199,8 +211,9 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 		Jugadas = append(Jugadas, in)
 
 		JugadasMux.Unlock()
-
-		if JuegoActual == pb.JUEGO_TirarCuerda {
+		if JuegoActual == pb.JUEGO_Luces{
+			SumasJugadores[in.NumJugador.Val - 1] += in.Jugada.Val
+		} else if JuegoActual == pb.JUEGO_TirarCuerda {
 			// Tirar Cuerda
 			if in.Equipo == 1 {
 				ValoresTeam1Mux.Lock()
@@ -297,7 +310,8 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 			res.Tipo == pb.EnvioJugada_Fin ||
 			res.Estado == pb.ESTADO_Muerto ||
 			res.Estado == pb.ESTADO_MuertoDefault ||
-			res.Estado == pb.ESTADO_Ganador {
+			res.Estado == pb.ESTADO_Ganador||
+			res.Estado == pb.ESTADO_Muerto21 {
 			break
 		}
 		// Se enviaron y se cortaron respuestas, ahora esperemos a la limpieza
@@ -501,6 +515,10 @@ func JuegoLucesWaitForResponses() {
 		}
 	}
 
+	// ENVIAR JUGADAS AL NAMENODE
+	// Las jugadas y los destinos ya están listos, enviaremos al nameNode.
+	//EnviarJugadasANameNode()
+
 	// Revisamos si es que murieron todos o si queda un jugador
 	RevisarSiFinDeJuego(vivos)
 
@@ -663,6 +681,10 @@ func JuegoTirarCuerdaWaitForResponses() {
 			}
 		}
 	}
+	
+	// ENVIAR JUGADAS AL NAMENODE
+	// Las jugadas y los destinos ya están listos, enviaremos al nameNode.
+	//EnviarJugadasANameNode()
 
 	// Revisamos si es que murieron todos o si queda un jugador
 	RevisarSiFinDeJuego(vivos)
@@ -759,6 +781,10 @@ func JuegoTodoNadaWaitForResponses() {
 			Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
 		}
 	}
+	
+	// ENVIAR JUGADAS AL NAMENODE
+	// Las jugadas y los destinos ya están listos, enviaremos al nameNode.
+	//EnviarJugadasANameNode()
 
 	// Revisamos si es que murieron todos o si queda un jugador
 	ImprimirWinners(vivos)
@@ -915,7 +941,7 @@ func CambiarEtapa(nEtapa pb.JUEGO) {
 	if JuegoActual == pb.JUEGO_None {
 
 	} else if JuegoActual == pb.JUEGO_Luces {
-
+		SumasJugadores = make([]int32, len(Jugadores))
 	} else if JuegoActual == pb.JUEGO_TirarCuerda {
 		fmt.Println("CAMBIANDO Y PREPARANDO JUEGO TIRAR CUERDA")
 
@@ -975,6 +1001,52 @@ func CambiarEtapa(nEtapa pb.JUEGO) {
 	} else if JuegoActual == pb.JUEGO_Fin {
 		fmt.Printf("SE ACABO EL JUEGO")
 	}
+}
+
+func EnviarJugadasANameNode() {
+	nAddrs := nameNodeAddress
+	if len(os.Args) == 2 {
+		nAddrs = "localhost" + nPort
+	}
+
+	fmt.Printf("Conectándose al NameNode - Addr: %s\n", nAddrs)
+
+	nconn, nerr := grpc.Dial(nAddrs, grpc.WithInsecure(), grpc.WithBlock())
+
+	if nerr != nil {
+		log.Fatalf("did not connect: %v\n", nerr)
+	}
+	defer nconn.Close()
+
+	nc:= pb.NewNameNodeClient(nconn)
+
+	for _, jug := range (Jugadas) {
+
+		jugadasArray := []*pb.Jugada{jug.Jugada}
+		jugRondaArray := []*pb.JugadasRonda{
+			{
+				NumRonda: &pb.RondaId{Val: CurrentRonda},
+				Jugadas: jugadasArray,
+			}}
+
+		SolicitudDeRegistro := &pb.SolicitudRegistrarJugadas{
+			JugadasJugador: &pb.JugadasJugador{
+				NumJugador: jug.NumJugador,
+				JugadasRonda: jugRondaArray,
+			},
+		}
+
+		r, err := nc.RegistrarJugadas(context.Background(), SolicitudDeRegistro)
+
+		if (err != nil) {
+			fmt.Printf("Error al solicitar registrar jugadas del jugador: %v\n", jug.NumJugador.Val)
+			continue
+		}
+
+		fmt.Printf("Se registró la jugada del Jugador: %v\n", r.NumJugador.Val)
+	}
+	fmt.Printf("Se registraron las jugadas del Juego: %v - Ronda: %v\n", JuegoActual, CurrentRonda)
+
 }
 
 func LiderService() {

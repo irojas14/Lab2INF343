@@ -7,7 +7,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"strconv"
 	"time"
 
 	funcs "github.com/irojas14/Lab2INF343/Funciones"
@@ -99,7 +98,7 @@ func Luces(c pb.LiderClient) error {
 			NumJugador: &ClientNumJugador,
 			Jugada:     &pb.Jugada{Val: randval},
 		}
-
+		
 		fmt.Printf("Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
 
 		stream.Send(&jugada)
@@ -122,7 +121,11 @@ func Luces(c pb.LiderClient) error {
 
 		fmt.Printf("Respuesta Jugada: %v - Etapa: %v - Estado: %v\n", in.String(), ClientCurrentGame, in.Estado.String())
 
-		if in.GetEstado() == pb.ESTADO_MuertoDefault {
+		if in.GetEstado() == pb.ESTADO_Muerto21{
+			fmt.Println("Jugaste 4 Rondas y tus azares no sumaron 21..., Estas muerto, Cerrando Stream y Volviendo.")
+			stream.CloseSend()
+			return nil
+		} else if in.GetEstado() == pb.ESTADO_MuertoDefault {
 			fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
 			stream.CloseSend()
 			return nil
@@ -177,6 +180,10 @@ func Luces(c pb.LiderClient) error {
 				fmt.Println("Muerto, Cerrando Stream y Volviendo")
 			} else if in2.Estado == pb.ESTADO_MuertoDefault {
 				fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
+			
+
+			} else if in2.Estado == pb.ESTADO_Muerto21{
+				fmt.Println("Jugaste 4 Rondas y tus azares no sumaron 21..., Estás muerto, Cerrando Stream y Volviendo.")
 
 			} else {
 
@@ -244,6 +251,10 @@ func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 			stream.CloseSend()
 			return nil
 
+		} else if in.Estado == pb.ESTADO_Muerto21{
+			fmt.Println("Jugaste 4 Rondas y tus azares no sumaron 21..., Estás muerto, Cerrando Stream y Volviendo.")
+			stream.CloseSend()
+			return nil
 		} else if in.Estado == pb.ESTADO_MuertoDefault {
 			fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
 			stream.CloseSend()
@@ -321,6 +332,10 @@ func JuegoTodoONada(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error 
 			fmt.Println("Muerto, Cerrando Stream y Volviendo")
 			stream.CloseSend()
 			return nil
+		} else if in.GetEstado() == pb.ESTADO_Muerto21{
+			fmt.Println("Jugaste 4 Rondas y tus azares no sumaron 21..., Estás muerto, Cerrando Stream y Volviendo.")
+			stream.CloseSend()
+			return nil
 		} else if in.Estado == pb.ESTADO_Ganador {
 
 			fmt.Println("HEMOS SOBREVIVIDO ! HEMOS GANADO ! Y AHORA SOMOS MILLONARIOS...Pero traumatizados")
@@ -368,6 +383,9 @@ func JuegoTodoONada(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error 
 				fmt.Println("Muerto, Cerrando Stream y Volviendo")
 			} else if in2.Estado == pb.ESTADO_MuertoDefault {
 				fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
+
+			} else if in2.Estado == pb.ESTADO_Muerto21{
+				fmt.Println("Jugaste 4 Rondas y tus azares no sumaron 21..., Estás muerto, Cerrando Stream y Volviendo.")
 
 			} else {
 
@@ -428,6 +446,12 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 		reterr = nil
 		return reterr, tipo
 
+	} else if in.Estado == pb.ESTADO_Muerto21{
+		fmt.Println("Jugaste 4 Rondas y tus azares no sumaron 21..., Estás muerto, Cerrando Stream y Volviendo.")
+		stream.CloseSend()
+		tipo = TipoRespuesta_Terminar
+		reterr = nil
+		return reterr, tipo
 	} else if in.Estado == pb.ESTADO_MuertoDefault {
 		fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
 		stream.CloseSend()
@@ -475,13 +499,4 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 	fmt.Println()
 
 	return reterr, tipo
-}
-
-// AUXILIAR
-
-func itos() {
-	i := 10
-	s1 := strconv.FormatInt(int64(i), 10)
-	s2 := strconv.Itoa(i)
-	fmt.Printf("%v, %v\n", s1, s2)
 }
