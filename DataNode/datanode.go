@@ -29,6 +29,10 @@ type server struct {
 
 func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrarJugadas) (*pb.RespuestaRegistrarJugadas, error) {
 	fmt.Println("Solicitud de Registro de Jugadas")
+
+	// Crear nuevo archivo de jugador, si es nuevo
+	
+
 	return &pb.RespuestaRegistrarJugadas{}, nil
 }
 

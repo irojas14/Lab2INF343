@@ -157,19 +157,19 @@ message PaqueteJugada {
     ESTADO estado = 5;
 }
 
-message JugadasRonda {
-    RondaId numRonda = 1;
+message JugadasJuego {
+    JUEGO numJuego = 1;
     repeated Jugada jugadas = 2;
 }
 
 message JugadasJugador {
     JugadorId numJugador = 1;
-    repeated JugadasRonda jugadasRonda = 2;
+    repeated JugadasJuego jugadasRonda = 2;
 }
 
-message JugadasRondaJugador {
+message JugadasJuegoJugador {
     JugadorId numJugador = 1;
-    JugadasRonda jugadasRonda = 2;
+    JugadasJuego jugadasJuego = 2;
 }
 
 message Jugadas {

@@ -212,7 +212,6 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 
 		JugadasMux.Unlock()
 		if JuegoActual == pb.JUEGO_Luces{
-			SumasJugadores[in.NumJugador.Val - 1] += in.Jugada.Val
 		} else if JuegoActual == pb.JUEGO_TirarCuerda {
 			// Tirar Cuerda
 			if in.Equipo == 1 {
@@ -496,20 +495,19 @@ func JuegoLucesWaitForResponses() {
 	// Si el valor del jugador es menor que el del lider, entonces vive, si no, muere
 	var vivos []*pb.EnvioJugada
 	var jugadas_len = len(Jugadas)
-
 	for index := 0; index < jugadas_len; index++ {
 		jug := Jugadas[index]
 		jug.Tipo = pb.EnvioJugada_Jugada
-
-		if jug.Jugada.Val < liderVal {
-
+		SumasJugadores[jug.NumJugador.Val - 1] += jug.Jugada.Val
+		if (CurrentRonda == 3) && (SumasJugadores[jug.NumJugador.Val - 1] < 21) {
+			jug.Estado = pb.ESTADO_Muerto21
+			CurrentAlivePlayers--
+			Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
+		} else if jug.Jugada.Val < liderVal {
 			jug.Estado = pb.ESTADO_Vivo
-
 			vivos = append(vivos, jug)
 		} else {
-
 			jug.Estado = pb.ESTADO_Muerto
-
 			CurrentAlivePlayers--
 			Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
 		}
@@ -569,7 +567,6 @@ func JuegoLucesCleanAndReset() {
 		liderMsg = "RONDA"
 	} else {
 
-		CurrentRonda = 0
 		waitingResponse = 1
 
 		liderMsg = "NUEVA ETAPA"
@@ -710,6 +707,12 @@ func JuegoTirarCuerdaCleanAndReset() {
 	// 1ERA, 2DA, 3RA PARTE
 	// Reiniciamos ResponsesCount, RepliesCount
 	BasicCleaning()
+
+	CurrentRondaMux.Lock()
+	
+	CurrentRonda++
+	
+	CurrentRondaMux.Unlock()
 
 	// 5TA PARTE - VER SI EL JUEGO TERMINO Y DEBEMOS CAMBIAR
 	CambiarEtapa(pb.JUEGO_TodoNada)
