@@ -138,7 +138,7 @@ func Luces(c pb.LiderClient) error {
 			return nil
 		}
 		if in.NumRonda.Val+2 >= 5 {
-			fmt.Printf("Esperando Respuesta de Inicio de juego numero: %v \n", in.NumJuego.Val)
+			fmt.Printf("Esperando Respuesta de Inicio de juego: Tirar cuerda. \n")
 		} else {
 			fmt.Printf("Esperando Respuesta de Inicio de %v Ronda\n", in.NumRonda.Val+2)
 		}
@@ -175,6 +175,9 @@ func Luces(c pb.LiderClient) error {
 			if in2.Estado == pb.ESTADO_Muerto {
 
 				fmt.Println("Muerto, Cerrando Stream y Volviendo")
+			} else if in2.Estado == pb.ESTADO_MuertoDefault {
+				fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
+
 			} else {
 
 				fmt.Printf("Se acabó el juego...por ahora\n")
@@ -238,6 +241,11 @@ func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 
 		if in.Estado == pb.ESTADO_Muerto {
 			fmt.Println("Muerto, Cerrando Stream y Volviendo")
+			stream.CloseSend()
+			return nil
+
+		} else if in.Estado == pb.ESTADO_MuertoDefault {
+			fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
 			stream.CloseSend()
 			return nil
 

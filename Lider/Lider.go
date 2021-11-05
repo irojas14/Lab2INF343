@@ -271,6 +271,7 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 		if res.Tipo == pb.EnvioJugada_Ganador ||
 			res.Tipo == pb.EnvioJugada_Fin ||
 			res.Estado == pb.ESTADO_Muerto ||
+			res.Estado == pb.ESTADO_MuertoDefault ||
 			res.Estado == pb.ESTADO_Ganador {
 			fmt.Printf("Envio Jugada quebrado por ganador o muerto: Jugador: %v - Tipo: %v - Estado: %v\n", in.NumJugador, res.Tipo, res.Estado)
 			break
@@ -318,7 +319,7 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 				if jugadorEliminado == in.NumJugador.Val {
 
 					res2.Tipo = pb.EnvioJugada_Fin
-					res2.Estado = pb.ESTADO_Muerto
+					res2.Estado = pb.ESTADO_MuertoDefault
 					res2.Equipo = 0
 					stream.Send(res2)
 					break
@@ -756,10 +757,11 @@ func CambiarEtapa(nEtapa pb.JUEGO) {
 		rand.Shuffle(len(Jugadores), func(i, j int) { Jugadores[i], Jugadores[j] = Jugadores[j], Jugadores[i] }) // se desordenan
 		var largo_jugadores int = len(Jugadores)
 		if largo_jugadores%2 == 1 {
-			jugadorEliminado = Jugadores[largo_jugadores-1]
+			jugadorEliminado = Jugadores[0]
 			fmt.Printf("Al apretar enter en la siguiente ronda se eliminara por azares el jugador:%v\n", jugadorEliminado)
 			CurrentAlivePlayers--
-			Jugadores = Jugadores[:largo_jugadores-1] //elimina el ultimo (despues del shuffle por lo que igual es random)
+			largo_jugadores--
+			Jugadores = Jugadores[1:] //elimina el primero (despues del shuffle por lo que igual es random)
 		}
 		Team1 = Jugadores[:largo_jugadores/2]
 		Team2 = Jugadores[largo_jugadores/2:]
