@@ -73,7 +73,7 @@ var (
 	Team2        []int32
 	ValoresTeam2 []int32
 
-	jugadorEliminado int32
+	jugadorEliminado int32 = -1
 
 	JugadoresMux sync.Mutex
 )
@@ -318,6 +318,7 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 
 				if jugadorEliminado == in.NumJugador.Val {
 
+					fmt.Printf("Jugador Eliminado Al Azar: %v, cerrándolo\n", in.NumJugador.Val)
 					res2.Tipo = pb.EnvioJugada_Fin
 					res2.Estado = pb.ESTADO_MuertoDefault
 					res2.Equipo = 0
@@ -386,7 +387,7 @@ func VerMonto() {
 var waitc chan int = make(chan int)
 
 func main() {
-
+	jugadorEliminado = -1
 	go LiderService()
 	go Update()
 	<-waitc
@@ -707,8 +708,15 @@ func BasicCleaning() {
 func AvisarTerminoCleanAndReset(waitingResponse int32) {
 	// Enviamos el waiting response definido anteriormente
 	CurrentAlivePlayersMux.Lock()
+
+	var loop int32 = 0
+	if jugadorEliminado != -1 {
+		loop = CurrentAlivePlayers + 1
+	} else {
+		loop = CurrentAlivePlayers
+	}
 	var i int32
-	for i = 0; i < CurrentAlivePlayers; i++ {
+	for i = 0; i < loop; i++ {
 
 		nextEventWaitingChan <- waitingResponse
 	}
@@ -729,6 +737,7 @@ func EsperarAvisoLider(liderMsg string) {
 
 func CambiarEtapa(nEtapa pb.JUEGO) {
 	fmt.Printf("EstadoActual: %v - Nuevo: %v\n", JuegoActual, nEtapa)
+	jugadorEliminado = -1
 
 	// Pre-procesamiento
 	if JuegoActual == pb.JUEGO_None {
