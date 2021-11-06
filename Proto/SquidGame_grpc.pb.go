@@ -323,7 +323,7 @@ var Pozo_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NameNodeClient interface {
 	RegistrarJugadas(ctx context.Context, in *SolicitudRegistrarJugadas, opts ...grpc.CallOption) (*RespuestaRegistrarJugadas, error)
-	DevolverJugadas(ctx context.Context, in *SolicitudDevolverJugadas, opts ...grpc.CallOption) (*RespuestaDevolverJugadas, error)
+	DevolverJugadas(ctx context.Context, in *SolicitudDevolverJugadasNameNode, opts ...grpc.CallOption) (*RespuestaDevolverJugadas, error)
 }
 
 type nameNodeClient struct {
@@ -343,7 +343,7 @@ func (c *nameNodeClient) RegistrarJugadas(ctx context.Context, in *SolicitudRegi
 	return out, nil
 }
 
-func (c *nameNodeClient) DevolverJugadas(ctx context.Context, in *SolicitudDevolverJugadas, opts ...grpc.CallOption) (*RespuestaDevolverJugadas, error) {
+func (c *nameNodeClient) DevolverJugadas(ctx context.Context, in *SolicitudDevolverJugadasNameNode, opts ...grpc.CallOption) (*RespuestaDevolverJugadas, error) {
 	out := new(RespuestaDevolverJugadas)
 	err := c.cc.Invoke(ctx, "/Proto.NameNode/DevolverJugadas", in, out, opts...)
 	if err != nil {
@@ -357,7 +357,7 @@ func (c *nameNodeClient) DevolverJugadas(ctx context.Context, in *SolicitudDevol
 // for forward compatibility
 type NameNodeServer interface {
 	RegistrarJugadas(context.Context, *SolicitudRegistrarJugadas) (*RespuestaRegistrarJugadas, error)
-	DevolverJugadas(context.Context, *SolicitudDevolverJugadas) (*RespuestaDevolverJugadas, error)
+	DevolverJugadas(context.Context, *SolicitudDevolverJugadasNameNode) (*RespuestaDevolverJugadas, error)
 	mustEmbedUnimplementedNameNodeServer()
 }
 
@@ -368,7 +368,7 @@ type UnimplementedNameNodeServer struct {
 func (UnimplementedNameNodeServer) RegistrarJugadas(context.Context, *SolicitudRegistrarJugadas) (*RespuestaRegistrarJugadas, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegistrarJugadas not implemented")
 }
-func (UnimplementedNameNodeServer) DevolverJugadas(context.Context, *SolicitudDevolverJugadas) (*RespuestaDevolverJugadas, error) {
+func (UnimplementedNameNodeServer) DevolverJugadas(context.Context, *SolicitudDevolverJugadasNameNode) (*RespuestaDevolverJugadas, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DevolverJugadas not implemented")
 }
 func (UnimplementedNameNodeServer) mustEmbedUnimplementedNameNodeServer() {}
@@ -403,7 +403,7 @@ func _NameNode_RegistrarJugadas_Handler(srv interface{}, ctx context.Context, de
 }
 
 func _NameNode_DevolverJugadas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SolicitudDevolverJugadas)
+	in := new(SolicitudDevolverJugadasNameNode)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -415,7 +415,7 @@ func _NameNode_DevolverJugadas_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: "/Proto.NameNode/DevolverJugadas",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NameNodeServer).DevolverJugadas(ctx, req.(*SolicitudDevolverJugadas))
+		return srv.(NameNodeServer).DevolverJugadas(ctx, req.(*SolicitudDevolverJugadasNameNode))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -445,7 +445,7 @@ var NameNode_ServiceDesc = grpc.ServiceDesc{
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DataNodeClient interface {
 	RegistrarJugadas(ctx context.Context, in *SolicitudRegistrarJugadas, opts ...grpc.CallOption) (*RespuestaRegistrarJugadas, error)
-	DevolverJugadas(ctx context.Context, in *SolicitudDevolverJugadas, opts ...grpc.CallOption) (*RespuestaDevolverJugadas, error)
+	DevolverJugadas(ctx context.Context, in *SolicitudDevolverJugadasDataNode, opts ...grpc.CallOption) (*RespuestaDevolverJugadas, error)
 }
 
 type dataNodeClient struct {
@@ -465,7 +465,7 @@ func (c *dataNodeClient) RegistrarJugadas(ctx context.Context, in *SolicitudRegi
 	return out, nil
 }
 
-func (c *dataNodeClient) DevolverJugadas(ctx context.Context, in *SolicitudDevolverJugadas, opts ...grpc.CallOption) (*RespuestaDevolverJugadas, error) {
+func (c *dataNodeClient) DevolverJugadas(ctx context.Context, in *SolicitudDevolverJugadasDataNode, opts ...grpc.CallOption) (*RespuestaDevolverJugadas, error) {
 	out := new(RespuestaDevolverJugadas)
 	err := c.cc.Invoke(ctx, "/Proto.DataNode/DevolverJugadas", in, out, opts...)
 	if err != nil {
@@ -479,7 +479,7 @@ func (c *dataNodeClient) DevolverJugadas(ctx context.Context, in *SolicitudDevol
 // for forward compatibility
 type DataNodeServer interface {
 	RegistrarJugadas(context.Context, *SolicitudRegistrarJugadas) (*RespuestaRegistrarJugadas, error)
-	DevolverJugadas(context.Context, *SolicitudDevolverJugadas) (*RespuestaDevolverJugadas, error)
+	DevolverJugadas(context.Context, *SolicitudDevolverJugadasDataNode) (*RespuestaDevolverJugadas, error)
 	mustEmbedUnimplementedDataNodeServer()
 }
 
@@ -490,7 +490,7 @@ type UnimplementedDataNodeServer struct {
 func (UnimplementedDataNodeServer) RegistrarJugadas(context.Context, *SolicitudRegistrarJugadas) (*RespuestaRegistrarJugadas, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegistrarJugadas not implemented")
 }
-func (UnimplementedDataNodeServer) DevolverJugadas(context.Context, *SolicitudDevolverJugadas) (*RespuestaDevolverJugadas, error) {
+func (UnimplementedDataNodeServer) DevolverJugadas(context.Context, *SolicitudDevolverJugadasDataNode) (*RespuestaDevolverJugadas, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DevolverJugadas not implemented")
 }
 func (UnimplementedDataNodeServer) mustEmbedUnimplementedDataNodeServer() {}
@@ -525,7 +525,7 @@ func _DataNode_RegistrarJugadas_Handler(srv interface{}, ctx context.Context, de
 }
 
 func _DataNode_DevolverJugadas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SolicitudDevolverJugadas)
+	in := new(SolicitudDevolverJugadasDataNode)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -537,7 +537,7 @@ func _DataNode_DevolverJugadas_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: "/Proto.DataNode/DevolverJugadas",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DataNodeServer).DevolverJugadas(ctx, req.(*SolicitudDevolverJugadas))
+		return srv.(DataNodeServer).DevolverJugadas(ctx, req.(*SolicitudDevolverJugadasDataNode))
 	}
 	return interceptor(ctx, in, info, handler)
 }

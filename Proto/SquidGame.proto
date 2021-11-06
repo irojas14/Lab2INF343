@@ -18,12 +18,12 @@ service Pozo {
 
 service NameNode {
     rpc RegistrarJugadas (SolicitudRegistrarJugadas) returns (RespuestaRegistrarJugadas);
-    rpc DevolverJugadas (SolicitudDevolverJugadas) returns (RespuestaDevolverJugadas);
+    rpc DevolverJugadas (SolicitudDevolverJugadasNameNode) returns (RespuestaDevolverJugadas);
 }
 
 service DataNode {
     rpc RegistrarJugadas (SolicitudRegistrarJugadas) returns (RespuestaRegistrarJugadas);
-    rpc DevolverJugadas (SolicitudDevolverJugadas) returns (RespuestaDevolverJugadas);
+    rpc DevolverJugadas (SolicitudDevolverJugadasDataNode) returns (RespuestaDevolverJugadas);
 }
 
 // MENSAJES
@@ -127,13 +127,24 @@ message RespuestaRegistrarJugadas {
 
 // Devolver Jugadas
 
-message SolicitudDevolverJugadas {
+// Solicitud del Lider al NameNode
+message SolicitudDevolverJugadasNameNode {
     JugadorId numJugador = 1;
 }
+
+// Solicitud del NameNode Al DataNode
+message SolicitudDevolverJugadasDataNode {
+    JugadorId numJugador = 1;
+    repeated string etapas = 2;    
+}
+
+// Respuesta Comun
 
 message RespuestaDevolverJugadas {
     JugadasJugador jugadasJugador = 1;
 }
+
+
 
 // MENSAJES Structs Auxiliares
 

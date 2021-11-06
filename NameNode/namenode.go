@@ -9,7 +9,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	funcs "github.com/irojas14/Lab2INF343/Funciones"
 	pb "github.com/irojas14/Lab2INF343/Proto"
@@ -53,7 +52,6 @@ type server struct {
 	pb.UnimplementedNameNodeServer
 }
 
-
 func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 
 	file, ferr := os.Open("NameNode/" + nameNodeFile)
@@ -66,36 +64,48 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 	res := &pb.JugadasJugador{}
 	res.NumJugador = &pb.JugadorId{Val: numjugador}
 
+	dirEtapasMap := make(map[string][]string)
 	for scanner.Scan() {
 		line := scanner.Text()
 		items := strings.Split(line, " ")
-		//items[0] = Jugador_numero
-		//items[1] = Ronda_numero
-		//items[2] = ip_datanode
+		//split: items[0] = Jugador_numero - items[1] = Etapa_numero - items[2] = ip_datanode
+		
 		if items[0] == "Jugador_" + funcs.FormatInt32(numjugador) {
 			fmt.Println(items)
-			conn, err := grpc.Dial(items[2], grpc.WithInsecure(), grpc.WithBlock())
-			if err != nil {
-				log.Fatalf("did not connect: %v", err)
-				return nil, err;
+			_, ok := dirEtapasMap[items[2]]
+			if (ok) {
+				dirEtapasMap[items[2]] = append(dirEtapasMap[items[2]], strings.Split(items[1], "_")[1])
+			} else {
+				dirEtapasMap[items[2]] = []string{strings.Split(items[1], "_")[1]}
 			}
-			defer conn.Close()
-			dc := pb.NewDataNodeClient(conn)
-
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-			defer cancel()
-
-			r, err := dc.DevolverJugadas(ctx, &pb.SolicitudDevolverJugadas{NumJugador: &pb.JugadorId{Val: numjugador}})
-			if err != nil {
-				log.Fatalf("Error: %v\n", err)
-				return nil, err;
-			}
-			//r.JugadasJugador.NumJugador.GetVal()
-			//r.JugadasJugador.JugadasRonda[0].NumRonda.GetVal()
-			//r.JugadasJugador.JugadasRonda[0].Jugadas[0].GetVal()
-			res.JugadasJuego = append(res.JugadasJuego, r.JugadasJugador.JugadasJuego[0])
 		}
 	}
+
+	for dialDir, etapas := range dirEtapasMap {
+
+		conn, err := grpc.Dial(dialDir, grpc.WithInsecure(), grpc.WithBlock())
+		if err != nil {
+			log.Fatalf("did not connect: %v", err)
+			return nil, err;
+		}
+		defer conn.Close()
+		dc := pb.NewDataNodeClient(conn)
+	
+		r, err := dc.DevolverJugadas(context.Background(), 
+		&pb.SolicitudDevolverJugadasDataNode{
+			NumJugador: &pb.JugadorId{Val: numjugador},
+			Etapas: etapas,
+		})
+
+		if err != nil {
+			log.Fatalf("Error: %v\n", err)
+			return nil, err;
+		}
+		res.JugadasJuego = append(res.JugadasJuego, r.JugadasJugador.JugadasJuego...)
+	}
+	//r.JugadasJugador.NumJugador.GetVal()
+	//r.JugadasJugador.JugadasJuego[0].NumJuego
+	//r.JugadasJugador.JugadasJuego[0].Jugadas[i].Val
 	return res, nil
 }
 
@@ -123,7 +133,7 @@ func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrar
     return &pb.RespuestaRegistrarJugadas{ NumJugador: &pb.JugadorId{Val: in.JugadasJugador.NumJugador.Val} }, nil
 }
 
-func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJugadas) (*pb.RespuestaDevolverJugadas, error) {
+func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJugadasNameNode) (*pb.RespuestaDevolverJugadas, error) {
 	log.Println("Sirviendo Solicitud de Devolver Jugada")
 	var numJugador = in.GetNumJugador().Val
 
@@ -143,7 +153,7 @@ func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) err
 	jugadorStr := strconv.FormatInt(int64(jugador), 10)
 	rondaStr := strconv.FormatInt(int64(juego), 10)
 
-	var linea string = "Jugador " + jugadorStr + " Etapa " + rondaStr + " " + selDataNodeAddrs + "\n"
+	var linea string = "Jugador_" + jugadorStr + " Etapa_" + rondaStr + " " + selDataNodeAddrs + "\n"
 
 	file, err := os.Open("NameNode/" + nameNodeFile)
 
@@ -155,7 +165,6 @@ func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) err
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		line := scanner.Text()+"\n"
-		fmt.Printf("Line: %v - Linea: %v - iguales?: %v\n", line, linea, line == linea)
 	
 		if (linea == line) {
 			fmt.Print("El archivo y el registro ya existe")

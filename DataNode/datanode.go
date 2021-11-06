@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -37,14 +38,15 @@ type server struct {
 
 func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrarJugadas) (*pb.RespuestaRegistrarJugadas, error) {
 	fmt.Println("Solicitud de Registro de Jugadas")
-	// Crear nuevo archivo de jugador, si es nuevo
-
-	fmt.Printf("Almacenar Jugada del Jugador %v del Juego %v\n", in.JugadasJugador.NumJugador.Val, in.JugadasJugador.JugadasJuego[0].NumJuego)
+	fmt.Printf("Almacenar Jugada %v del Jugador %v del Juego %v\n", 
+	in.JugadasJugador.JugadasJuego[0].Jugadas[0], in.JugadasJugador.NumJugador.Val, in.JugadasJugador.JugadasJuego[0].NumJuego)
 
 	jugadorStr := strconv.FormatInt(int64(in.JugadasJugador.NumJugador.Val), 10)
 	etapaStr := strconv.FormatInt(int64(in.JugadasJugador.JugadasJuego[0].NumJuego), 10)
 
 	var nombreArchivo = "jugador_" + jugadorStr + "__Etapa_" + etapaStr + ".txt"
+
+	// Crear nuevo archivo de jugador, si es nuevo
 	if (!funcs.Is_in_folder(nombreArchivo, curFiles)) {
 		funcs.CrearArchivoTxt(curFiles + "/" + nombreArchivo)
 	}
@@ -64,9 +66,41 @@ func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrar
 	return &pb.RespuestaRegistrarJugadas{NumJugador: in.JugadasJugador.NumJugador}, nil
 }
 
-func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJugadas) (*pb.RespuestaDevolverJugadas, error) {
+func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJugadasDataNode) (*pb.RespuestaDevolverJugadas, error) {
 	fmt.Println("Solicitud de Devolución de Jugadas")
-	return &pb.RespuestaDevolverJugadas{}, nil
+	
+	jugadorStr := strconv.FormatInt(int64(in.NumJugador.Val), 10)
+
+	prefix := "jugador_" + jugadorStr + "__Etapa_"
+
+	res := &pb.RespuestaDevolverJugadas{
+		JugadasJugador: &pb.JugadasJugador{
+			NumJugador: in.NumJugador,
+		},
+	}
+
+	for _, etapaStr := range in.Etapas {
+		nombreArchivo := prefix + etapaStr + ".txt"
+		jugadas, err := ObtenerJugadasArray(nombreArchivo)
+		if (err != nil) {
+			log.Fatalf("Error al buscar las jugadas en el archivo: err: %v\n", err)
+			return nil, err
+		}
+
+		numJuego32, err2 := strconv.ParseInt(etapaStr, 10, 32)
+
+		if (err2 != nil) {
+			log.Fatalf("Error en la conversión al buscar las jugadas en el archivo: err: %v\n", err2)			
+			return nil, err2
+		}
+
+		jugadasJuego := &pb.JugadasJuego {
+			NumJuego: pb.JUEGO(numJuego32),
+			Jugadas: jugadas,
+		}
+		res.JugadasJugador.JugadasJuego = append(res.JugadasJugador.JugadasJuego, jugadasJuego)
+	}
+	return res, nil
 }
 
 // is_in_folder(file_name string, ruta string)
@@ -122,4 +156,28 @@ func main(){
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to server: %v", err)
 	}
+}
+
+func ObtenerJugadasArray(nombreArchivo string) ([]*pb.Jugada, error) {
+	file, err := os.Open("DataNode/" + curFiles + "/" + nombreArchivo)
+
+	if err != nil {
+		fmt.Println(err)
+		return nil, err
+	}
+
+	scanner := bufio.NewScanner(file)
+	var jugadas []*pb.Jugada
+	for scanner.Scan() {
+		jStr := scanner.Text()
+		j, err2 := strconv.ParseInt(jStr, 10, 32)
+		if (err2 != nil)  {
+			log.Fatalf("Error en la Conversion de la Jugada: err: %v\n", err2)
+			return nil, err2
+		}
+		j32 := int32(j)
+		jugada := &pb.Jugada{Val: j32}
+		jugadas = append(jugadas, jugada)
+	}
+	return jugadas, nil
 }

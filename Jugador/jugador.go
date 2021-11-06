@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"sync"
 	"time"
 
 	funcs "github.com/irojas14/Lab2INF343/Funciones"
@@ -21,65 +22,82 @@ const (
 	liderAddress = "dist149.inf.santiago.usm.cl" + port
 )
 
+var dialAddrs string
+
 var (
 	ClientNumJugador  pb.JugadorId
 	ClientNumRonda    pb.RondaId
 	ClientCurrentGame pb.JUEGO
 	ClienTeam         int32
+	ClientCurrentEstado pb.ESTADO
+)
+
+type TipoJugador int
+
+const (
+	TipoJugador_Humano TipoJugador = 0
+	TipoJugador_Bot TipoJugador = 1
+)
+
+var (
+	tipo TipoJugador
+)
+
+var (
+	juegoIniciadoaMux sync.Mutex
+)
+
+var (
+	enRondaMux sync.Mutex
+	enRonda bool = false
+)
+
+var (
+	enUnirse bool = false
+	enUnirseMux sync.Mutex
+)
+
+var (
+	waitForGameReady chan int32  = make(chan int32)
+	waitForJugadaChan chan int32 = make(chan int32)
+	waitc chan int32             = make(chan int32)
+)
+
+var (
+	c pb.LiderClient
 )
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	dialAddrs := liderAddress
+	
+	dialAddrs = liderAddress
 	if len(os.Args) == 2 {
 		dialAddrs = local
 	}
 
-	fmt.Printf("COMENZANDO EL JUGADOR - Addr: %s\n", dialAddrs)
-	// Set up a connection to the server.
-	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		log.Fatalf("did not connect: %v\n", err)
-	}
-	defer conn.Close()
-	c := pb.NewLiderClient(conn)
+	if (os.Args[1] == "1") {
+		tipo = TipoJugador_Humano
 
-	stream, err := c.Unirse(context.Background(), &pb.SolicitudUnirse{})
+	} else {
+		tipo = TipoJugador_Bot
+	}
 
-	if err != nil {
-		log.Fatalf("Error: %v\n", err)
-		return
-	}
-	for {
-		fmt.Println("A Recibir datos de Unirse del Lider")
-		r, err := stream.Recv()
-		fmt.Println("Información Recibida")
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			log.Fatalf("\nError al Recibir: %v - %v\n", c, err)
-			break
-		}
-		log.Println("\nRespuesta: " + r.String())
-
-		if r.MsgTipo == pb.RespuestaUnirse_Comenzar {
-			ClientNumJugador = *r.GetNumJugador()
-			ClientNumRonda = *r.GetNumRonda()
-			ClientCurrentGame = r.GetNumJuego()
-			log.Printf("Valores: %v - %v - %v\n", ClientNumJugador.GetVal(), ClientNumRonda.GetVal(), ClientCurrentGame)
-			break
-		}
-	}
-	if ClientCurrentGame == pb.JUEGO_Luces {
-		Luces(c)
-	}
+	if (tipo == TipoJugador_Humano) {
+		go Update()
+		go Consola()
+		<-waitc
+	} else {
+		UnirseJuego()
+	} 
 }
 
 // JUEGOS
 
-func Luces(c pb.LiderClient) error {
+func Luces(cr *pb.LiderClient) error {
+	c := *cr
 	stream, err := c.EnviarJugada(context.Background())
+
+	fmt.Printf("\nCOMENZANDO JUEGO LUCES: %v\n\n", ClientNumJugador.Val)
 
 	if err != nil {
 		log.Fatalf("Error al Enviar Jugada Stream: %v\n", err)
@@ -87,10 +105,16 @@ func Luces(c pb.LiderClient) error {
 	}
 
 	for {
-		var randval int32 = funcs.RandomInRange(1, 10)
-		fmt.Printf("Random Value: %v\n", randval)
 
-		jugada := pb.EnvioJugada{
+		var randval int32
+		if (tipo == TipoJugador_Humano) {
+			randval = <-waitForJugadaChan
+
+		} else {
+			randval = funcs.RandomInRange(1, 10)
+		}
+
+		jugada := &pb.EnvioJugada{
 			Tipo:       pb.EnvioJugada_Jugada,
 			Rol:        pb.EnvioJugada_Jugador,
 			NumJuego:   pb.JUEGO_Luces,
@@ -98,10 +122,12 @@ func Luces(c pb.LiderClient) error {
 			NumJugador: &ClientNumJugador,
 			Jugada:     &pb.Jugada{Val: randval},
 		}
+
+		fmt.Printf("Valor Elegido: %v\n", randval)
 		
 		fmt.Printf("Enviando Jugada al Lider: %v - Jugador: %v\n", jugada.Jugada, ClientNumJugador.Val)
 
-		stream.Send(&jugada)
+		stream.Send(jugada)
 
 		fmt.Println("Jugada Enviada, Esperando Resolución")
 
@@ -167,6 +193,7 @@ func Luces(c pb.LiderClient) error {
 		if in2.GetTipo() == pb.EnvioJugada_NuevaRonda {
 
 			fmt.Println("Pasamos a la Siguiente Ronda")
+			TurnEnRondaFalse()
 
 		} else if in2.GetTipo() == pb.EnvioJugada_Ganador {
 
@@ -197,6 +224,7 @@ func Luces(c pb.LiderClient) error {
 			ClientCurrentGame = in2.NumJuego
 			ClienTeam = in2.Equipo
 			ClientNumRonda = *in2.GetNumRonda()
+			TurnEnRondaFalse()
 			break
 		}
 		fmt.Println()
@@ -207,12 +235,24 @@ func Luces(c pb.LiderClient) error {
 	return nil
 }
 
+func TurnEnRondaFalse() {
+	enRondaMux.Lock()
+	enRonda = false
+	enRondaMux.Unlock()
+}
+
 func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 
 	fmt.Println("En el Juego 2: Tirar la Cuerda!!")
 	for {
-		var randval int32 = funcs.RandomInRange(1, 4)
-		fmt.Printf("Random Value: %v\n", randval)
+		var randval int32
+		if (tipo == TipoJugador_Humano) {
+			randval = <-waitForJugadaChan
+		} else {
+			randval = funcs.RandomInRange(1, 4)
+		}
+
+		fmt.Printf("Valor Elegido: %v\n", randval)
 
 		jugada := &pb.EnvioJugada{
 			Tipo:       pb.EnvioJugada_Jugada,
@@ -278,6 +318,7 @@ func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 			return res2
 
 		} else if tipo == TipoRespuesta_NuevaEtapa {
+			TurnEnRondaFalse()
 			break
 		}
 	}
@@ -289,8 +330,15 @@ func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 func JuegoTodoONada(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 
 	for {
-		var randval int32 = funcs.RandomInRange(1, 10)
-		fmt.Printf("Random Value: %v\n", randval)
+		var randval int32
+
+		if (tipo == TipoJugador_Humano) {
+			randval = <-waitForJugadaChan
+		} else {
+			randval = funcs.RandomInRange(1, 10)
+		}
+
+		fmt.Printf("Valor Elegido: %v\n", randval)
 
 		jugada := pb.EnvioJugada{
 			Tipo:       pb.EnvioJugada_Jugada,
@@ -370,6 +418,7 @@ func JuegoTodoONada(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error 
 		if in2.Tipo == pb.EnvioJugada_NuevaRonda {
 
 			fmt.Println("Pasamos a la Siguiente Ronda")
+			TurnEnRondaFalse()
 
 		} else if in2.Tipo == pb.EnvioJugada_Ganador {
 
@@ -399,6 +448,7 @@ func JuegoTodoONada(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error 
 			ClientCurrentGame = in2.NumJuego
 			ClienTeam = in2.Equipo
 			ClientNumRonda = *in2.GetNumRonda()
+			TurnEnRondaFalse()
 			break
 		}
 		fmt.Println()
@@ -500,4 +550,226 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 	fmt.Println()
 
 	return tipo, reterr
+}
+
+var (
+	terminarJuego = false
+ 	input string
+ 	juegoIniciado = false
+)
+
+func Consola() {
+	for {
+		if (terminarJuego) {
+			break
+		}
+
+		ShowConsola()
+
+		fmt.Print("Ingrese Opción: ")
+		fmt.Scanln(&input)
+		fmt.Printf("Consola Input: %v\n", input)
+
+		ProcesamientoConsola(input)
+		fmt.Println("==================================")	
+	}
+}
+
+func ShowConsola() {
+	fmt.Println("==========MENÚ JUGADOR==========")	
+	
+	// Opciones
+	if (!juegoIniciado)  {
+		fmt.Println("Unirse a JUEGO: PRESIONAR 'S' + 'ENTER'")
+
+	} else {
+		fmt.Println("Continuar al SIGUIENTE EVENTO: PRESIONAR 'S' + 'ENTER'")
+
+	}
+	fmt.Println("Ver MONTO ACUMULADO: PRESIONAR 'M' + 'ENTER'")
+	fmt.Println("Terminar Servicio: PRESIONAR 'E' + 'ENTER'")
+}
+
+func Update() {
+
+	<-waitForGameReady
+	if (juegoIniciado && ClientCurrentGame == pb.JUEGO_Luces) {
+		fmt.Println("En el Update Iniciando Luces")
+		Luces(&c)
+	}
+}
+
+func ProcesamientoConsola(input string) {
+	
+	if (input == "m" || input == "M") {
+		VerMonto()
+
+	} else if (input == "s" || input == "S") {
+		if (!juegoIniciado){
+			Unirse()
+
+		} else {
+			SiguienteEvento()
+
+		}
+	} else if input == "e" || input == "E" {
+		terminarJuego = true
+		waitc<-0
+		return
+
+	} else {
+		fmt.Printf("Opción %v no válida\n", input)
+	}
+}
+
+func VerMonto() {
+	dialAddrs := liderAddress
+	if len(os.Args) == 2 {
+		dialAddrs = local
+	}
+
+	fmt.Println("CONSULTANDO MONTO ACUMULADO")
+	
+	// Set up a connection to the server.
+	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v\n", err)
+	}
+	defer conn.Close()
+	c := pb.NewLiderClient(conn)
+
+	r, err2 := c.VerMonto(context.Background(), &pb.SolicitudVerMonto{})
+
+	if (err2 != nil) {
+		log.Fatalf("Error al Consultar el Monto: %v\n", err2)
+		return
+	}
+
+	fmt.Printf("El MONTO ACUMULADO en el POZO Es: %v\n", r.Monto)
+}
+
+func Unirse() {
+	enUnirseMux.Lock()
+
+	if (enUnirse) {
+		fmt.Println("Aún Esperando Unirse. Espere o Cancele")
+		enUnirseMux.Unlock()		
+		return
+	}
+
+	enUnirse = true
+	
+	enUnirseMux.Unlock()	
+	
+	go UnirseJuego()
+}
+
+func UnirseJuego() (*pb.LiderClient, error) {
+	
+	fmt.Println("INTENTADO UNIRSE A JUEGO")
+	
+	// Set up a connection to the server.
+	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v\n", err)
+	}
+	defer conn.Close()
+	c = pb.NewLiderClient(conn)
+
+	stream, err := c.Unirse(context.Background(), &pb.SolicitudUnirse{})
+
+	if err != nil {
+		log.Fatalf("Error: %v\n", err)
+		return nil, err
+	}
+
+	for {
+		fmt.Println("A Recibir datos de Unirse del Lider")
+		r, err := stream.Recv()
+		fmt.Println("Información Recibida")
+		
+		if err == io.EOF {
+			enUnirseMux.Lock()
+			enUnirse = false
+			enRondaMux.Unlock()
+			break
+		}
+		if err != nil {
+			log.Fatalf("\nError al Recibir: %v - %v\n", c, err)
+			enUnirseMux.Lock()
+			enUnirse = false
+			enRondaMux.Unlock()
+			return nil, err
+		}
+		log.Println("\nRespuesta: " + r.String())
+
+		if r.MsgTipo == pb.RespuestaUnirse_Comenzar {
+			ClientNumJugador = *r.GetNumJugador()
+			ClientNumRonda = *r.GetNumRonda()
+			ClientCurrentGame = r.GetNumJuego()
+			ClientCurrentEstado = pb.ESTADO_Vivo			
+			log.Printf("Valores: %v - %v - %v\n", ClientNumJugador.GetVal(), ClientNumRonda.GetVal(), ClientCurrentGame)
+			
+			if (tipo == TipoJugador_Humano) {
+				fmt.Println("Jugador Humano Recibió Comenzar")				
+				juegoIniciadoaMux.Lock()
+				juegoIniciado = true
+				juegoIniciadoaMux.Unlock()
+
+				enUnirseMux.Lock()
+				enUnirse = false
+				enUnirseMux.Unlock()
+
+				// Pone en marcha el update
+				waitForGameReady<-0
+			}
+			break
+		}
+	}
+	if (tipo == TipoJugador_Bot) {
+		Luces(&c)
+		fmt.Println("Terminó el Juego para el Bot")
+		return nil, nil
+	}
+	<-waitc
+	return nil, nil
+}
+
+func SiguienteEvento() {
+	enRondaMux.Lock()
+	
+	if (enRonda) {
+		fmt.Println("Aún no termina la ronda")
+		enRondaMux.Unlock()		
+		return
+	}
+	enRondaMux.Unlock()
+
+	ElegirValor()
+}
+
+func ElegirValor() int32 {
+	var a int32 = 1
+	var b int32
+	var input int32
+	for {
+		if (ClientCurrentGame == pb.JUEGO_TirarCuerda) {
+			b = 4
+		} else {
+			b = 10
+		}
+		fmt.Printf("Elija un Valor entre %v y %v: ", a, b)
+		fmt.Scanln(&input)
+		//fmt.Printf("Elegir Valor Input: %v\n", input)		
+
+		if a <= input && input <= b {
+			enRondaMux.Lock()
+			enRonda = true
+			enRondaMux.Unlock()
+			waitForJugadaChan <- input			
+			return input
+		} else {
+			fmt.Printf("Valor %v elegido fuera del rango. Ingrese otra vez.\n", input)
+		}
+	}
 }

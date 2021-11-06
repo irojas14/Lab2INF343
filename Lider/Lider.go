@@ -20,7 +20,7 @@ import (
 // Direcciones
 
 const (
-	MaxPlayers      = 10
+	MaxPlayers      = 4
 	nameNodeAddress = "dist150.inf.santiago.usm.cl:50054"
 	nPort = ":50054"
 	pozoAddress     = "dist151.inf.santiago.usm.cl:50051"
@@ -71,7 +71,7 @@ var (
 	gameLiderValChan         chan int32 = make(chan int32)
 	nextEventWaitingChan     chan int32 = make(chan int32)
 	serverGameProcessingChan chan int32 = make(chan int32)
-	esperaLiderChan chan int32 = make(chan int32)
+	esperaLiderChan          chan int32 = make(chan int32)
 )
 
 var (
@@ -455,18 +455,27 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 	return nil
 }
 
-func VerMonto() {
+func (s *server) VerMonto(ctx context.Context, in *pb.SolicitudVerMonto) (*pb.RespuestaVerMonto, error) {
+	err := VerMonto()
+	return &pb.RespuestaVerMonto{Monto: montoAcumulado}, err
+}
+
+// FUNCIONES NO DEL LIDER SERVER
+
+func VerMonto() error {
 	dialAddrs := pozoAddress
 	if len(os.Args) == 2 {
 		dialAddrs = "localhost:50051"
 	}
 
-	fmt.Println("CONSULTANDO MONTO ACUMULADO al POZO")
+	fmt.Println("CONTESTANDO SOLICITUD DE VER MONTO ACUMULADO al POZO")
 	
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
+	
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
+		return err
 	}
 	defer conn.Close()
 	c := pb.NewPozoClient(conn)
@@ -478,10 +487,11 @@ func VerMonto() {
 
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
+		return err
 	}
 
-	montoAcumulado =r.Monto	
-	fmt.Printf("El MONTO ACUMULADO Actual Es: $%f\n", montoAcumulado)
+	montoAcumulado =r.Monto
+	return nil
 }
 
 // Para actuaizar el Proto file, correr
@@ -540,10 +550,8 @@ func Update() {
 
 func ShowConsola() {
 	fmt.Println("==========MENÚ LÍDER==========")	
-	ShowConsolaOptions()
-}
-
-func ShowConsolaOptions() {
+	
+	// Opciones
 	if (!juegoIniciado)  {
 		fmt.Println("Iniciar JUEGO: PRESIONAR 'S' + 'ENTER'")
 
@@ -554,16 +562,6 @@ func ShowConsolaOptions() {
 	fmt.Println("Ver MONTO ACUMULADO: PRESIONAR 'M' + 'ENTER'")
 	fmt.Println("Ver JUGADAS de JUGADOR: PRESIONAR 'J' + 'ENTER'")
 	fmt.Println("Terminar Servicio: PRESIONAR 'E' + 'ENTER'")
-}
-
-func ShowConsolaInicial() {
-	fmt.Println("Iniciar Juego: PRESIONAR 'S' + 'ENTER'")
-	fmt.Println("Ver Monto Acumulado: PRESIONAR 'M' + 'ENTER'")
-}
-
-func ShowConsolaInGame() {
-	fmt.Println("Siguiente Evento: PRESIONAR 'S' + 'ENTER'")
-	fmt.Println("Ver Monto Acumulado: PRESIONAR 'M' + 'ENTER'")
 }
 
 func ProcesamientoConsola(liderInput string) {
