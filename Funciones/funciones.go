@@ -5,13 +5,26 @@ package Funciones
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"math/rand"
 	"os"
 	"strconv"
 
 	pb "github.com/irojas14/Lab2INF343/Proto"
 )
-
+func Is_in_folder(file_name string, ruta string) bool{
+	all_files, err := ioutil.ReadDir(ruta)
+    if err != nil {
+        log.Fatal(err)
+    }
+    for _, f := range all_files {
+    	if f.Name() == file_name{
+    		return true
+    	}
+    }
+    return false
+}
 func RandomInRange(min int32, max int32) int32 {
 	return rand.Int31n(max-min+1) + min
 }
@@ -133,6 +146,16 @@ func Absoluto(n int32) int32 {
 		return n
 	}
 	return -1 * n
+}
+
+func DeleteFile(path string) {
+    // delete file
+    var err = os.Remove(path)
+    if isError(err) {
+        return
+    }
+
+    fmt.Println("Archivo eliminado")
 }
 
 /*

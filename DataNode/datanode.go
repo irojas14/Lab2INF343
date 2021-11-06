@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 
 	funcs "github.com/irojas14/Lab2INF343/Funciones"
 	pb "github.com/irojas14/Lab2INF343/Proto"
@@ -13,13 +14,20 @@ import (
 )
 
 const (
-	dn1Port = ":50055"
-	dn2Port = ":50056"
-	dn3Port = ":50057"
+	dn1Port = ":50057"
+	dn2Port = ":50058"
+	dn3Port = ":50059"
 	local = "localhost"
 	dn1Addrs = "dist149.inf.santiago.usm.cl" + dn1Port
-	dn2Addrs = "dist151.inf.santiago.usm.cl" + dn1Port
-	dn3Addrs = "dist152.inf.santiago.usm.cl" + dn1Port
+	dn2Addrs = "dist151.inf.santiago.usm.cl" + dn2Port
+	dn3Addrs = "dist152.inf.santiago.usm.cl" + dn3Port
+)
+
+var (
+	filesDn1 = "FilesDataNode1"
+	filesDn2 = "FilesDataNode2"
+	filesDn3 = "FilesDataNode3"
+	curFiles = "DataNode/"
 )
 
 
@@ -29,11 +37,29 @@ type server struct {
 
 func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrarJugadas) (*pb.RespuestaRegistrarJugadas, error) {
 	fmt.Println("Solicitud de Registro de Jugadas")
-
-
 	// Crear nuevo archivo de jugador, si es nuevo
 
-	return &pb.RespuestaRegistrarJugadas{}, nil
+	jugadorStr := strconv.FormatInt(int64(in.JugadasJugador.NumJugador.Val), 10)
+	etapaStr := strconv.FormatInt(int64(in.JugadasJugador.JugadasJuego[0].NumJuego), 10)
+
+	var nombreArchivo = "jugador_" + jugadorStr + "__Etapa_" + etapaStr + ".txt"
+	if (!funcs.Is_in_folder(nombreArchivo, curFiles)) {
+		funcs.CrearArchivoTxt(curFiles + "/" + nombreArchivo)
+	}
+
+	// Obtener la jugada
+
+	jugada := in.JugadasJugador.JugadasJuego[0].Jugadas[0].Val
+	jugadas := []int32{jugada}
+	
+	// insertarla en el archivo correspondiente
+	funcs.InsertarJugadasDelJugador(curFiles + "/" + nombreArchivo, jugadas)
+
+	fmt.Printf("Se Insertó la Jugada: %v del Jugador %v en el Juego: %v en el archivo %v\n", 
+	jugadas[0], in.JugadasJugador.NumJugador.Val, in.JugadasJugador.JugadasJuego[0].NumJuego, nombreArchivo)
+
+	fmt.Println("Retornando")
+	return &pb.RespuestaRegistrarJugadas{NumJugador: in.JugadasJugador.NumJugador}, nil
 }
 
 func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJugadas) (*pb.RespuestaDevolverJugadas, error) {
@@ -41,15 +67,13 @@ func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJu
 	return &pb.RespuestaDevolverJugadas{}, nil
 }
 
-
-//archivo : jugador_numero__ronda_numero.txt
-
-func CrearArchivoDeJugadas(numjugador, rondajugador int32){
-	var NombreArchivo string = "jugador_" + funcs.FormatInt32(numjugador) + "__ronda_" + funcs.FormatInt32(rondajugador) + ".txt"
-	funcs.CrearArchivoTxt(NombreArchivo)
-	//funcs.InsertarJugadasDelJugador()
-}
-
+// is_in_folder(file_name string, ruta string)
+/*
+	DataNode
+		//FilesDataNode1
+		//FilesDataNode2
+		//FilesDataNode3
+*/
 func main(){
 	var srvAddr string;
 	argsLen := len(os.Args)
@@ -61,22 +85,30 @@ func main(){
 
 		if (os.Args[1] == "1") {
 			srvAddr += dn1Port
+			curFiles += filesDn1
 		} else if (os.Args[1] == "2") {
 			srvAddr += dn2Port
+			curFiles += filesDn2
 		} else if (os.Args[1] == "3") {
 			srvAddr += dn3Port
+			curFiles += filesDn3
 		}
 
 	} else if argsLen < 3 {
 
 		if (os.Args[1] == "1") {
 			srvAddr = dn1Addrs
+			curFiles += filesDn1
 		} else if (os.Args[1] == "2") {
 			srvAddr = dn2Addrs
+			curFiles += filesDn2			
 		} else if (os.Args[1] == "3") {
 			srvAddr = dn3Addrs
+			curFiles += filesDn3			
 		}
 	}
+
+	fmt.Printf("Carpeta CurFiles: %v\n",curFiles)
 	lis, err := net.Listen("tcp", srvAddr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v\n", err)
@@ -86,6 +118,6 @@ func main(){
 	pb.RegisterDataNodeServer(s, &server{})
 	log.Printf("DataNode escuchando en %v\n", lis.Addr())
 	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		log.Fatalf("failed to server: %v", err)
 	}
 }

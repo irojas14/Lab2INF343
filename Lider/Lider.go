@@ -20,7 +20,7 @@ import (
 // Direcciones
 
 const (
-	MaxPlayers      = 8
+	MaxPlayers      = 6
 	nameNodeAddress = "dist150.inf.santiago.usm.cl:50054"
 	nPort = ":50054"
 	pozoAddress     = "dist151.inf.santiago.usm.cl:50051"
@@ -52,12 +52,20 @@ var (
 	waitingForCleaning chan int32 = make(chan int32)
 )
 
+// Channels
+
 var (
 	JuegoActual              pb.JUEGO
 	gameReadyChan            chan int32 = make(chan int32)
 	gameLiderValChan         chan int32 = make(chan int32)
 	nextEventWaitingChan     chan int32 = make(chan int32)
 	serverGameProcessingChan chan int32 = make(chan int32)
+	esperaLiderChan chan int32 = make(chan int32)
+)
+
+var (
+	ValorLider int32
+	montoAcumulado float32
 )
 
 // Variables 1er Juego "Luz Roja, Luz Verde (Luces)"
@@ -175,10 +183,6 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 
 		fmt.Printf("Comenzando ! Jugadores Totales: %v\n", MaxPlayers)
 		fmt.Println("JUEGO: Luz Roja, Luz Verde - Ronda: 1")
-
-		for i := 0; i < MaxPlayers-1; i++ {
-			gameReadyChan <- 0
-		}
 	}
 	return nil
 }
@@ -441,6 +445,7 @@ func VerMonto() {
 		log.Fatalf("could not greet: %v", err)
 	}
 	fmt.Printf("\nEl Monto Acumulado Actual es: %f\n", r.GetMonto())
+	montoAcumulado =r.Monto
 }
 
 // Para actuaizar el Proto file, correr
@@ -453,6 +458,7 @@ var waitc chan int = make(chan int)
 func main() {
 	jugadorEliminado = -1
 	go LiderService()
+	go LiderConsola()
 	go Update()
 	<-waitc
 }
@@ -475,6 +481,106 @@ func Update() {
 		}
 	}
 }
+// FUNCIONES CONSOLA  ------------------------------------------------------------------------------------------------------------------------------
+
+ var liderInput string
+ var juegoIniciado bool = false
+
+ var rondaEnJuegoMux sync.Mutex
+ var rondaEnProceso bool = false
+
+ func  LiderConsola() {
+	ShowConsola()
+	
+	fmt.Print("Ingrese Opción: ")
+	fmt.Scanln("%v", liderInput)
+
+	ProcesamientoConsola(liderInput)
+	fmt.Println("==================================")	
+}
+
+func ShowConsola() {
+	fmt.Println("==========MENÚ LÍDER==========")	
+	if (juegoIniciado) {
+		ShowConsolaInGame()
+	} else {
+		ShowConsolaInicial()
+	}	
+}
+
+func ShowConsolaInicial() {
+	fmt.Println("Iniciar Juego: PRESIONAR 's' + ENTER")
+	fmt.Println("Ver Monto Acumulado: PRESIONAR 'm' + ENTER")
+}
+
+func ShowConsolaInGame() {
+	fmt.Println("Siguiente Evento: PRESIONAR 's'")
+	fmt.Println("Ver Monto Acumulado: PRESIONAR 'm'")
+} 
+
+func ProcesamientoConsola(liderInput string) {
+	if (juegoIniciado) { 
+		ProcesamientoConsolaInit(liderInput)
+	} else {
+		ProcesamientoConsolaInGame(liderInput)
+	}
+}
+
+func ProcesamientoConsolaInit(liderInput string) {
+	
+	if (liderInput == "m") {
+		VerMonto()
+
+	} else if (liderInput == "s") {
+		IniciarJuego()
+	}
+}
+
+func ProcesamientoConsolaInGame(liderInput string) {
+	if (liderInput == "m") {
+		VerMonto()
+		
+	} else if (liderInput == "s") {
+		SiguienteEvento()
+	}
+}
+func SiguienteEvento() {
+	if (!juegoIniciado) {
+		fmt.Println("El juego aún no ha sido iniciado")
+		return
+
+	} else if (rondaEnProceso) {
+
+		CurrentRondaMux.Lock()
+		fmt.Printf("Ronda %v está aún en Proceso\n", CurrentRonda)
+		CurrentRondaMux.Unlock()		
+		return
+	}
+
+	esperaLiderChan <- 0
+	
+	rondaEnJuegoMux.Lock()
+	rondaEnProceso = true
+	rondaEnJuegoMux.Unlock()
+}
+func IniciarJuego() {
+	CurrentAlivePlayersMux.Lock()
+	
+	if (juegoIniciado) {
+		fmt.Println("El juego ya fue iniciado")
+		return
+	}
+	if (CurrentAlivePlayers < MaxPlayers) {
+		fmt.Printf("Faltan jugadores. Jugadores Actuales: %v\n", CurrentAlivePlayers)
+		CurrentAlivePlayersMux.Unlock()		
+		return
+	}
+
+	for i := 0; i < MaxPlayers-1; i++ {
+		gameReadyChan <- 0
+	}
+	CurrentAlivePlayersMux.Unlock()
+}
 
 var terminarJuego = false
 
@@ -489,8 +595,8 @@ func JuegoLucesWaitForResponses() {
 			PARA DEBUGEAR, SE DEJA EL RANDOM DEL  LIDER EN NUMBEROS MAS ALTOS!!!
 		liderVal := funcs.RandomInRange(6, 10)
 	*/
-	liderVal := funcs.RandomInRange(10, 14)
-	fmt.Printf("VALOR DEL LÍDER: %v\n", liderVal)
+	ValorLider = funcs.RandomInRange(10, 14)
+	fmt.Printf("VALOR DEL LÍDER: %v\n", ValorLider)
 	// Recorremos las respuestas colocadas en el arreglo global "Jugadas", definiendo el estado correspondiente
 	// Si el valor del jugador es menor que el del lider, entonces vive, si no, muere
 	var vivos []*pb.EnvioJugada
@@ -503,7 +609,7 @@ func JuegoLucesWaitForResponses() {
 			jug.Estado = pb.ESTADO_Muerto21
 			CurrentAlivePlayers--
 			Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
-		} else if jug.Jugada.Val < liderVal {
+		} else if jug.Jugada.Val < ValorLider {
 			jug.Estado = pb.ESTADO_Vivo
 			vivos = append(vivos, jug)
 		} else {
@@ -514,15 +620,15 @@ func JuegoLucesWaitForResponses() {
 	}
 
 	// ENVIAR JUGADAS AL NAMENODE
-	// Las jugadas y los destinos ya están listos, enviaremos al nameNode.
-	//EnviarJugadasANameNode()
+	// Las jugadas y los destinos ya están listos, enviaremos al nameNode
+	EnviarJugadasANameNode()
 
 	// Revisamos si es que murieron todos o si queda un jugador
 	RevisarSiFinDeJuego(vivos)
 
 	// Debemos avisar a los clientes que esperan que el procesamiento esta listo
 	// hay que avisarle a cada uno, por medio del channel "gamerLiderValChan"
-	AvisarRespuestaLiderLista(liderVal)
+	AvisarRespuestaLiderLista(ValorLider)
 
 	// NEXT - ESPERAMOS SE HAYAN ENVIADO LAS RESPUESTAS A TODOS LOS CLIENTES PARA LIMPIAR
 	<-waitingForCleaning
@@ -910,14 +1016,18 @@ func AvisarTerminoCleanAndReset(waitingResponse int32) {
 }
 
 func EsperarAvisoLider(liderMsg string) {
-
+	/*
 	var liderSignal string
 	fmt.Printf("AVISE INICIO SIGUIENTE: %v (Presione ENTER)\n", liderMsg)
 	// Se espera un input del humano lider
 	fmt.Scanln(&liderSignal)
 
 	fmt.Println()
-	fmt.Println()
+	fmt.Println()*/
+	rondaEnJuegoMux.Lock()
+	rondaEnProceso = false
+	rondaEnJuegoMux.Unlock()	
+	<-esperaLiderChan
 
 }
 
@@ -1043,10 +1153,9 @@ func EnviarJugadasANameNode() {
 		r, err := nc.RegistrarJugadas(context.Background(), SolicitudDeRegistro)
 
 		if (err != nil) {
-			fmt.Printf("Error al solicitar registrar jugadas del jugador: %v\n", jug.NumJugador.Val)
+			fmt.Printf("Error al solicitar registrar jugadas del jugador: %v - err: %v\n", jug.NumJugador.Val, err)
 			continue
 		}
-
 		fmt.Printf("Se registró la jugada del Jugador: %v\n", r.NumJugador.Val)
 	}
 	fmt.Printf("Se registraron las jugadas del Juego: %v - Ronda: %v\n", JuegoActual, CurrentRonda)

@@ -18,7 +18,7 @@ import (
 const (
 	port    = ":50052"
 	local   = "localhost" + port
-	address = "dist149.inf.santiago.usm.cl" + port
+	liderAddress = "dist149.inf.santiago.usm.cl" + port
 )
 
 var (
@@ -30,7 +30,7 @@ var (
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	dialAddrs := address
+	dialAddrs := liderAddress
 	if len(os.Args) == 2 {
 		dialAddrs = local
 	}
@@ -272,7 +272,7 @@ func TirarCuerda(c pb.LiderClient, stream pb.Lider_EnviarJugadaClient) error {
 
 		in2, err2 := stream.Recv()
 
-		res2, tipo := ProcesarRespuesta(stream, in2, err2, jugada)
+		tipo, res2 := ProcesarRespuesta(stream, in2, err2, jugada)
 
 		if tipo == TipoRespuesta_EOF || tipo == TipoRespuesta_Error || tipo == TipoRespuesta_Terminar {
 			return res2
@@ -418,7 +418,7 @@ const (
 	TipoRespuesta_NuevaEtapa TipoRespuesta = 5
 )
 
-func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, err error, jugada *pb.EnvioJugada) (error, TipoRespuesta) {
+func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, err error, jugada *pb.EnvioJugada) (TipoRespuesta, error) {
 
 	var tipo TipoRespuesta
 	var reterr error
@@ -427,14 +427,14 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 		log.Fatalf("END OF FILE: %v\n", err)
 		tipo = TipoRespuesta_EOF
 		reterr = nil
-		return reterr, tipo
+		return tipo, reterr
 	}
 
 	if err != nil {
 		log.Fatalf("Error No EOF: %v\n", err)
 		tipo = TipoRespuesta_Error
 		reterr = err
-		return reterr, tipo
+		return tipo, reterr
 	}
 
 	fmt.Printf("Respuesta Jugada: %v - Estado: %v\n", in.String(), in.Estado.String())
@@ -444,20 +444,21 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 		stream.CloseSend()
 		tipo = TipoRespuesta_Terminar
 		reterr = nil
-		return reterr, tipo
+		return tipo, reterr
 
 	} else if in.Estado == pb.ESTADO_Muerto21{
 		fmt.Println("Jugaste 4 Rondas y tus azares no sumaron 21..., Estás muerto, Cerrando Stream y Volviendo.")
 		stream.CloseSend()
 		tipo = TipoRespuesta_Terminar
 		reterr = nil
-		return reterr, tipo
+		return tipo, reterr
+
 	} else if in.Estado == pb.ESTADO_MuertoDefault {
 		fmt.Println("Jugaste pero no tenias equipo, muerto por defecto(azares de paridad en juego 2)!, Cerrando Stream y Volviendo")
 		stream.CloseSend()
 		tipo = TipoRespuesta_Terminar
 		reterr = nil
-		return reterr, tipo
+		return tipo, reterr
 
 	} else if in.Estado == pb.ESTADO_Ganador || in.Tipo == pb.EnvioJugada_Ganador {
 
@@ -466,7 +467,7 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 		stream.CloseSend()
 		tipo = TipoRespuesta_Terminar
 		reterr = nil
-		return reterr, tipo
+		return tipo, reterr
 	}
 
 	if in.Tipo == pb.EnvioJugada_NuevaRonda {
@@ -481,7 +482,7 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 		tipo = TipoRespuesta_Terminar
 		reterr = nil
 		stream.CloseSend()
-		return reterr, tipo
+		return tipo, reterr
 
 	} else if in.Tipo == pb.EnvioJugada_NuevoJuego {
 		fmt.Printf("Cambiando de Etapa\n")
@@ -498,5 +499,5 @@ func ProcesarRespuesta(stream pb.Lider_EnviarJugadaClient, in *pb.EnvioJugada, e
 	fmt.Println()
 	fmt.Println()
 
-	return reterr, tipo
+	return tipo, reterr
 }

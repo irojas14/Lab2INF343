@@ -23,7 +23,7 @@ const (
 )
 
 const (
-	nameNodeFile = "registro"
+	nameNodeFile = "registro.txt"
 )
 
 const (
@@ -35,9 +35,9 @@ const (
 
 const (
 	dnLocal = "localhost"
-	local1 = dnLocal + ":50055"
-	local2 = dnLocal + ":50056"
-	local3 = dnLocal + ":50057"
+	local1 = dnLocal + ":50057"
+	local2 = dnLocal + ":50058"
+	local3 = dnLocal + ":50059"
 )
 
 var (
@@ -48,8 +48,6 @@ var (
 
 var DataNodeAddresses [3]string = [3]string{dn1Addrs, dn2Addrs, dn3Addrs}
 
-var UbicacionJugadasJugadores = "UbicaciónJugadasDeJugadores.txt"
-
 
 type server struct {
 	pb.UnimplementedNameNodeServer
@@ -58,7 +56,7 @@ type server struct {
 
 func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 
-	file, ferr := os.Open(UbicacionJugadasJugadores)
+	file, ferr := os.Open("NameNode/" + nameNodeFile)
 	if ferr != nil {
 		panic(ferr)
 	}
@@ -142,7 +140,7 @@ func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) err
 	jugador := jugadasEnv.NumJugador.Val
 	juego := jugadasEnv.JugadasJuego[0].NumJuego
 
-	file, err := os.OpenFile(nameNodeFile, os.O_APPEND|os.O_WRONLY, 0777)
+	file, err := os.OpenFile("NameNode/" + nameNodeFile, os.O_APPEND|os.O_WRONLY, 0777)
 
 	if err != nil {
 		fmt.Println(err)
@@ -175,6 +173,7 @@ func AlmacenamientoDataNode(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs stri
 	conn, err := grpc.Dial(selDataNodeAddrs, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v\n", err)
+		return err
 	}
 	defer conn.Close()
 	c := pb.NewDataNodeClient(conn)
@@ -183,6 +182,8 @@ func AlmacenamientoDataNode(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs stri
 		JugadasJugador: jugadasEnv,
 	}
 	r, err := c.RegistrarJugadas(context.Background(), solicitudDeRegistro)
+
+	fmt.Println("Datanode Respondió")
 
 	if (err != nil) {
 		log.Fatalf("Error al registrar jugadas en el DataNode %v: err: %v\n", selDataNodeAddrs, err)
@@ -196,7 +197,7 @@ func AlmacenamientoDataNode(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs stri
 func main() {
 	
 	// Creamos el archivo de registro
-	funcs.CrearArchivoTxt(nameNodeFile)
+	funcs.CrearArchivoTxt("NameNode/" + nameNodeFile)
 
 
 	// Definimos nuestras direcciones: remotas o locales
@@ -223,41 +224,3 @@ func main() {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }
-
-	/*
-	for _, elem := range(curAddrs) {
-		fmt.Printf(elem + " - ")
-	}
-	fmt.Println()
-
-	// Set up a connection to the server.
-	conn, err := grpc.Dial(curAddrs[0], grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		log.Fatalf("did not connect: %v\n", err)
-	}
-	defer conn.Close()
-	c := pb.NewDataNodeClient(conn)
-
-	r, err := c.RegistrarJugadas(context.Background(), &pb.SolicitudRegistrarJugadas{})
-
-	if err != nil {
-		log.Fatalf("Error en la respuesta: %v\n", err)
-	}
-	fmt.Println("Respuesta Recibida: " + r.String())
-
-	// Set up a connection to the server.
-	conn, err = grpc.Dial(curAddrs[1], grpc.WithInsecure(), grpc.WithBlock())
-	if err != nil {
-		log.Fatalf("did not connect: %v\n", err)
-	}
-
-	c = pb.NewDataNodeClient(conn)
-
-	r, err = c.RegistrarJugadas(context.Background(), &pb.SolicitudRegistrarJugadas{})
-
-	if err != nil {
-		log.Fatalf("Error en la respuesta: %v\n", err)
-	}
-	fmt.Println("Respuesta Recibida: " + r.String())
-	*/
-
