@@ -21,11 +21,11 @@ import (
 // Direcciones
 
 const (
-	MaxPlayers      = 8
+	MaxPlayers      = 4
 	nameNodeAddress = "dist150.inf.santiago.usm.cl:50054"
-	nPort = ":50054"
+	nPort           = ":50054"
 	pozoAddress     = "dist151.inf.santiago.usm.cl:50051"
-	pPort = ":50051"
+	pPort           = ":50051"
 	sPort           = ":50052"
 	address         = "dist149.inf.santiago.usm.cl" + sPort
 	local           = "localhost" + sPort
@@ -56,12 +56,12 @@ var (
 )
 
 var (
-	liderInput string
+	liderInput       string
 	juegoIniciadoMux sync.Mutex
-	juegoIniciado bool = false
-   
+	juegoIniciado    bool = false
+
 	rondaEnJuegoMux sync.Mutex
-	rondaEnProceso bool = false
+	rondaEnProceso  bool = false
 )
 
 // Channels
@@ -76,7 +76,7 @@ var (
 )
 
 var (
-	ValorLider int32
+	ValorLider     int32
 	montoAcumulado float32
 )
 
@@ -87,13 +87,11 @@ var (
 	JugadasMux sync.Mutex
 )
 
-
 // Variables 1er Juego "Luces"
 
 var (
-	SumasJugadores  []int32
+	SumasJugadores []int32
 )
-
 
 // Variables 2do Juego "Tirar la Cuerda"
 
@@ -160,7 +158,7 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 		CurrentAlivePlayers = jugNum.Val
 		CurrentAlivePlayersMux.Unlock()
 
-		if (jugNum.Val == MaxPlayers) {
+		if jugNum.Val == MaxPlayers {
 			fmt.Printf("Se unieron los %v/%v Jugadores. Esperando señal de inicio del Líder para comenzar\n", CurrentAlivePlayers, MaxPlayers)
 		} else {
 			fmt.Printf("%v/%v. Esperando más jugadores...", CurrentAlivePlayers, MaxPlayers)
@@ -190,35 +188,35 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 	}
 	return nil
 	/*
-	else if jugNum.GetVal() == MaxPlayers {
-		res := &pb.RespuestaUnirse{
-			MsgTipo:    pb.RespuestaUnirse_Comenzar,
-			NumJugador: jugNum,
-			NumJuego:   pb.JUEGO_Luces,
-			NumRonda:   &pb.RondaId{Val: 0},
+		else if jugNum.GetVal() == MaxPlayers {
+			res := &pb.RespuestaUnirse{
+				MsgTipo:    pb.RespuestaUnirse_Comenzar,
+				NumJugador: jugNum,
+				NumJuego:   pb.JUEGO_Luces,
+				NumRonda:   &pb.RondaId{Val: 0},
+			}
+			if err := stream.Send(res); err != nil {
+				return err
+			}
+
+			JugadoresMux.Lock()
+			Jugadores = append(Jugadores, jugNum.Val)
+			JugadoresMux.Unlock()
+
+			CurrentAlivePlayers = res.GetNumJugador().GetVal()
+
+			fmt.Printf("Se unieron los %v/%v Jugadores. Esperando señal de inicio del Líder para comenzar\n", CurrentAlivePlayers, MaxPlayers)
+
+			<-gameReadyChan
+
+			fmt.Println()
+			fmt.Println()
+
+			CambiarEtapa(pb.JUEGO_Luces)
+
+			fmt.Printf("Comenzando ! Jugadores Totales: %v\n", MaxPlayers)
+			fmt.Println("JUEGO: Luz Roja, Luz Verde - Ronda: 1")
 		}
-		if err := stream.Send(res); err != nil {
-			return err
-		}
-
-		JugadoresMux.Lock()
-		Jugadores = append(Jugadores, jugNum.Val)
-		JugadoresMux.Unlock()
-
-		CurrentAlivePlayers = res.GetNumJugador().GetVal()
-
-		fmt.Printf("Se unieron los %v/%v Jugadores. Esperando señal de inicio del Líder para comenzar\n", CurrentAlivePlayers, MaxPlayers)
-
-		<-gameReadyChan
-
-		fmt.Println()
-		fmt.Println()
-
-		CambiarEtapa(pb.JUEGO_Luces)
-
-		fmt.Printf("Comenzando ! Jugadores Totales: %v\n", MaxPlayers)
-		fmt.Println("JUEGO: Luz Roja, Luz Verde - Ronda: 1")
-	}
 	*/
 }
 
@@ -250,7 +248,7 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 		Jugadas = append(Jugadas, in)
 
 		JugadasMux.Unlock()
-		if JuegoActual == pb.JUEGO_Luces{
+		if JuegoActual == pb.JUEGO_Luces {
 		} else if JuegoActual == pb.JUEGO_TirarCuerda {
 			// Tirar Cuerda
 			if in.Equipo == 1 {
@@ -348,7 +346,7 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 			res.Tipo == pb.EnvioJugada_Fin ||
 			res.Estado == pb.ESTADO_Muerto ||
 			res.Estado == pb.ESTADO_MuertoDefault ||
-			res.Estado == pb.ESTADO_Ganador||
+			res.Estado == pb.ESTADO_Ganador ||
 			res.Estado == pb.ESTADO_Muerto21 {
 			break
 		}
@@ -392,6 +390,7 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 				if jugadorEliminado == in.NumJugador.Val {
 					res2.Tipo = pb.EnvioJugada_Fin
 					res2.Estado = pb.ESTADO_MuertoDefault
+					fmt.Printf("PIUM!, hemos matado al jugador %v.\n", res2.NumJugador.Val)
 					res2.Equipo = 0
 					stream.Send(res2)
 					return nil
@@ -402,6 +401,7 @@ func (s *server) EnviarJugada(stream pb.Lider_EnviarJugadaServer) error {
 				if jugadorEliminado == in.NumJugador.Val {
 					res2.Tipo = pb.EnvioJugada_Fin
 					res2.Estado = pb.ESTADO_MuertoDefault
+					fmt.Printf("PIUM!, hemos matado al jugador %v.\n", res2.NumJugador.Val)
 					res2.Equipo = -1
 					stream.Send(res2)
 					return nil
@@ -470,10 +470,10 @@ func VerMonto() error {
 	}
 
 	fmt.Println("CONTESTANDO SOLICITUD DE VER MONTO ACUMULADO al POZO")
-	
+
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
-	
+
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 		return err
@@ -491,7 +491,7 @@ func VerMonto() error {
 		return err
 	}
 
-	montoAcumulado =r.Monto
+	montoAcumulado = r.Monto
 	return nil
 }
 
@@ -529,12 +529,13 @@ func Update() {
 		}
 	}
 }
+
 // FUNCIONES CONSOLA  ------------------------------------------------------------------------------------------------------------------------------
 
- func  LiderConsola() {
+func LiderConsola() {
 
 	for {
-		if (terminarJuego) {
+		if terminarJuego {
 			break
 		}
 
@@ -545,15 +546,15 @@ func Update() {
 		fmt.Printf("Lider Input: %v\n", liderInput)
 
 		ProcesamientoConsola(liderInput)
-		fmt.Println("==================================")	
+		fmt.Println("==================================")
 	}
 }
 
 func ShowConsola() {
-	fmt.Println("==========MENÚ LÍDER==========")	
-	
+	fmt.Println("==========MENÚ LÍDER==========")
+
 	// Opciones
-	if (!juegoIniciado)  {
+	if !juegoIniciado {
 		fmt.Println("Iniciar JUEGO: PRESIONAR 'S' + 'ENTER'")
 
 	} else {
@@ -566,12 +567,12 @@ func ShowConsola() {
 }
 
 func ProcesamientoConsola(liderInput string) {
-	
-	if (liderInput == "m" || liderInput == "M") {
+
+	if liderInput == "m" || liderInput == "M" {
 		VerMonto()
 
-	} else if (liderInput == "s" || liderInput == "S") {
-		if (!juegoIniciado){
+	} else if liderInput == "s" || liderInput == "S" {
+		if !juegoIniciado {
 			IniciarJuego()
 
 		} else {
@@ -583,7 +584,7 @@ func ProcesamientoConsola(liderInput string) {
 
 	} else if liderInput == "e" || liderInput == "E" {
 		terminarJuego = true
-		waitc<-0
+		waitc <- 0
 		return
 
 	} else {
@@ -600,7 +601,7 @@ func ObtenerJugadas() {
 	fmt.Scanln(&numJugadorStr)
 
 	// Si nos entrega "E", volvemos
-	if (numJugadorStr == "e" || numJugadorStr == "E") {
+	if numJugadorStr == "e" || numJugadorStr == "E" {
 		return
 	}
 
@@ -618,67 +619,71 @@ func ObtenerJugadas() {
 		log.Fatalf("did not connect: %v\n", err)
 	}
 	defer conn.Close()
-	
+
 	// Creamos el NameNodeClient, para hacer solicitudes al NameNode, que está escuchando (idealmente)
 	nc := pb.NewNameNodeClient(conn)
 
 	// Convertimos el input entregado, que es un string, a int64 y luego a int32
 	numJugador64, err2 := strconv.ParseInt(numJugadorStr, 10, 32)
-	if (err2 != nil) {
+	if err2 != nil {
 		log.Fatalf("Falló la Conversión al querer Obtener las jugadas del Jugador %v: err: %v\n", numJugadorStr, err2)
 		return
 	}
 	numJugador32 := int32(numJugador64)
-	
+
 	// Realizamos el Procedimiento Remoto "DevolverJugadas" al NameNode
 	// Recibimos un contexto y una SolicitudDevolverJugadasNameNode, que es básicamente un Numero de Jugador
 	// en la variables r se almacenará nuestra respuesta
-	
+
 	//r : RespuestaDevolverJugadasNameNode
-		// r.JugadasJugador
-			// NumJugador
-			// Arreglo de JugadasJuego
-				// una JugadaJuego es:
-					// NumJuego
-					// Arreglo de Jugadas
-						// Jugadas.Val => es el valor int32 de la jugada
+	// r.JugadasJugador
+	// NumJugador
+	// Arreglo de JugadasJuego
+	// una JugadaJuego es:
+	// NumJuego
+	// Arreglo de Jugadas
+	// Jugadas.Val => es el valor int32 de la jugada
 
-	r, err3 := nc.DevolverJugadas(context.Background(), 
-	&pb.SolicitudDevolverJugadasNameNode{
-		NumJugador: &pb.JugadorId{
-			Val: numJugador32,
-		},
-	})
+	r, err3 := nc.DevolverJugadas(context.Background(),
+		&pb.SolicitudDevolverJugadasNameNode{
+			NumJugador: &pb.JugadorId{
+				Val: numJugador32,
+			},
+		})
 
-	if (err3 != nil) {
+	if err3 != nil {
 		log.Fatalf("Error Al Consultar las Jugadas del Jugador %v: err: %v\n", numJugadorStr, err3)
-		return 
+		return
 	}
 
 	// Imprimimos la respuesta "r"
 	// Recorremos el arreglo de JugadasJuego
-		// Imprimimos el NumJuego; y
-		// Recorremos el arreglo de Jugadas e imprimimos su campo Val
+	// Imprimimos el NumJuego; y
+	// Recorremos el arreglo de Jugadas e imprimimos su campo Val
 	fmt.Printf("MOSTRANDO Jugadas del JUGADOR %v\n", r.JugadasJugador.NumJugador.Val)
 	for _, jugadaJuego := range r.JugadasJugador.JugadasJuego {
 		fmt.Printf("JUEGO: %v\n", jugadaJuego.NumJuego)
-		
+
 		for i, jugada := range jugadaJuego.Jugadas {
-			fmt.Printf("[%v]: %v\n",i, jugada.Val)
+			fmt.Printf("[%v]: %v\n", i, jugada.Val)
 		}
 	}
 }
 
 func SiguienteEvento() {
-	if (!juegoIniciado) {
+	if !juegoIniciado {
 		fmt.Println("El juego aún no ha sido iniciado")
 		return
 
-	} else if (rondaEnProceso) {
+	} else if rondaEnProceso {
 
 		CurrentRondaMux.Lock()
-		fmt.Printf("Ronda %v está aún en Proceso\n", CurrentRonda)
-		CurrentRondaMux.Unlock()		
+		if CurrentRonda+1 <= 4 {
+			fmt.Printf("Ronda %v está aún en Proceso\n", CurrentRonda+1)
+		} else {
+			fmt.Println("El desarrollo del juego aún está en proceso.")
+		}
+		CurrentRondaMux.Unlock()
 		return
 	}
 
@@ -693,28 +698,26 @@ func IniciarJuego() {
 	fmt.Println("INTENTANDO INICIAR JUEGO")
 	CurrentAlivePlayersMux.Lock()
 	defer CurrentAlivePlayersMux.Unlock()
-	
-	if (juegoIniciado) {
+
+	if juegoIniciado {
 		fmt.Println("El juego ya fue iniciado")
 		return
 	}
-	if (CurrentAlivePlayers < MaxPlayers) {
-		fmt.Printf("Faltan jugadores. Jugadores Actuales: %v\n", CurrentAlivePlayers)	
+	if CurrentAlivePlayers < MaxPlayers {
+		fmt.Printf("Faltan jugadores. Jugadores Actuales: %v\n", CurrentAlivePlayers)
 		return
 	}
 
 	juegoIniciadoMux.Lock()
-	
-	juegoIniciado = true;
-	
+
+	juegoIniciado = true
+
 	juegoIniciadoMux.Unlock()
 
 	for i := 0; i < MaxPlayers; i++ {
 		gameReadyChan <- 0
 	}
 }
-
-
 
 func JuegoLucesWaitForResponses() {
 	<-serverGameProcessingChan
@@ -727,7 +730,7 @@ func JuegoLucesWaitForResponses() {
 			PARA DEBUGEAR, SE DEJA EL RANDOM DEL  LIDER EN NUMBEROS MAS ALTOS!!!
 		liderVal := funcs.RandomInRange(6, 10)
 	*/
-	ValorLider = funcs.RandomInRange(10, 14)
+	ValorLider = funcs.RandomInRange(11, 14)
 	fmt.Printf("VALOR DEL LÍDER: %v\n", ValorLider)
 	// Recorremos las respuestas colocadas en el arreglo global "Jugadas", definiendo el estado correspondiente
 	// Si el valor del jugador es menor que el del lider, entonces vive, si no, muere
@@ -736,9 +739,10 @@ func JuegoLucesWaitForResponses() {
 	for index := 0; index < jugadas_len; index++ {
 		jug := Jugadas[index]
 		jug.Tipo = pb.EnvioJugada_Jugada
-		SumasJugadores[jug.NumJugador.Val - 1] += jug.Jugada.Val
-		if (CurrentRonda == 3) && (SumasJugadores[jug.NumJugador.Val - 1] < 21) {
+		SumasJugadores[jug.NumJugador.Val-1] += jug.Jugada.Val
+		if (CurrentRonda == 3) && (SumasJugadores[jug.NumJugador.Val-1] < 21) {
 			jug.Estado = pb.ESTADO_Muerto21
+			fmt.Printf("PIUM!, hemos matado al jugador %v.\n", jug.NumJugador.Val)
 			CurrentAlivePlayers--
 			Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
 		} else if jug.Jugada.Val < ValorLider {
@@ -746,6 +750,7 @@ func JuegoLucesWaitForResponses() {
 			vivos = append(vivos, jug)
 		} else {
 			jug.Estado = pb.ESTADO_Muerto
+			fmt.Printf("PIUM!, hemos matado al jugador %v.\n", jug.NumJugador.Val)
 			CurrentAlivePlayers--
 			Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
 		}
@@ -788,8 +793,11 @@ func JuegoLucesCleanAndReset() {
 	CurrentRondaMux.Lock()
 
 	CurrentRonda++
-
-	fmt.Printf("La Ronda a Comenzar: %v\n", CurrentRonda+1)
+	if CurrentRonda <= 3 {
+		fmt.Printf("La Ronda a Comenzar: %v\n", CurrentRonda+1)
+	} else {
+		fmt.Println("Comenzará el siguiente juego.")
+	}
 
 	// 5TA PARTE - VER SI JUEGO LUCES TERMINO Y DEBEMOS CAMBIAR
 
@@ -888,7 +896,7 @@ func JuegoTirarCuerdaWaitForResponses() {
 				vivos = append(vivos, jug)
 			} else {
 				jug.Estado = pb.ESTADO_Muerto
-
+				fmt.Printf("PIUM!, hemos matado al jugador %v.\n", jug.NumJugador.Val)
 				CurrentAlivePlayers--
 				Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
 			}
@@ -910,13 +918,13 @@ func JuegoTirarCuerdaWaitForResponses() {
 				vivos = append(vivos, jug)
 			} else {
 				jug.Estado = pb.ESTADO_Muerto
-
+				fmt.Printf("PIUM!, hemos matado al jugador %v.\n", jug.NumJugador.Val)
 				CurrentAlivePlayers--
 				Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
 			}
 		}
 	}
-	
+
 	// ENVIAR JUGADAS AL NAMENODE
 	// Las jugadas y los destinos ya están listos, enviaremos al nameNode.
 	EnviarJugadasANameNode()
@@ -947,9 +955,9 @@ func JuegoTirarCuerdaCleanAndReset() {
 	BasicCleaning()
 
 	CurrentRondaMux.Lock()
-	
+
 	CurrentRonda++
-	
+
 	CurrentRondaMux.Unlock()
 
 	// 5TA PARTE - VER SI EL JUEGO TERMINO Y DEBEMOS CAMBIAR
@@ -1017,12 +1025,12 @@ func JuegoTodoNadaWaitForResponses() {
 
 		} else {
 			jug.Estado = pb.ESTADO_Muerto
-
+			fmt.Printf("PIUM!, hemos matado al jugador %v.\n", jug.NumJugador.Val)
 			CurrentAlivePlayers--
 			Jugadores = funcs.Remove(Jugadores, jug.NumJugador.Val)
 		}
 	}
-	
+
 	// ENVIAR JUGADAS AL NAMENODE
 	// Las jugadas y los destinos ya están listos, enviaremos al nameNode.
 	EnviarJugadasANameNode()
@@ -1097,7 +1105,7 @@ func RevisarSiFinDeJuego(vivos []*pb.EnvioJugada) {
 func ImprimirWinners(vivos []*pb.EnvioJugada) {
 	fmt.Println("LOS GANADORES!!")
 	for _, elem := range vivos {
-		fmt.Printf("Ganador: %v\n", elem)
+		fmt.Printf("Ganador: Jugador nº %v.\n", elem.NumJugador.Val)
 	}
 }
 
@@ -1149,16 +1157,16 @@ func AvisarTerminoCleanAndReset(waitingResponse int32) {
 
 func EsperarAvisoLider(liderMsg string) {
 	/*
-	var liderSignal string
-	fmt.Printf("AVISE INICIO SIGUIENTE: %v (Presione ENTER)\n", liderMsg)
-	// Se espera un input del humano lider
-	fmt.Scanln(&liderSignal)
+		var liderSignal string
+		fmt.Printf("AVISE INICIO SIGUIENTE: %v (Presione ENTER)\n", liderMsg)
+		// Se espera un input del humano lider
+		fmt.Scanln(&liderSignal)
 
-	fmt.Println()
-	fmt.Println()*/
+		fmt.Println()
+		fmt.Println()*/
 	rondaEnJuegoMux.Lock()
 	rondaEnProceso = false
-	rondaEnJuegoMux.Unlock()	
+	rondaEnJuegoMux.Unlock()
 	<-esperaLiderChan
 }
 
@@ -1187,6 +1195,8 @@ func CambiarEtapa(nEtapa pb.JUEGO) {
 	} else if JuegoActual == pb.JUEGO_Luces {
 		SumasJugadores = make([]int32, len(Jugadores))
 	} else if JuegoActual == pb.JUEGO_TirarCuerda {
+		fmt.Printf("Jugadores que siguen vivos:%v\n", Jugadores)
+
 		fmt.Println("CAMBIANDO Y PREPARANDO JUEGO TIRAR CUERDA")
 
 		rand.Seed(time.Now().UnixNano())
@@ -1206,6 +1216,7 @@ func CambiarEtapa(nEtapa pb.JUEGO) {
 		fmt.Printf("TEAM 2: %v\n", Team2)
 
 	} else if JuegoActual == pb.JUEGO_TodoNada {
+		fmt.Printf("Jugadores que siguen vivos:%v\n", Jugadores)
 		fmt.Println("CAMBIANDO Y PREPARANDO JUEGO TODO O NADA")
 
 		rand.Seed(time.Now().UnixNano())
@@ -1262,34 +1273,34 @@ func EnviarJugadasANameNode() {
 	}
 	defer nconn.Close()
 
-	nc:= pb.NewNameNodeClient(nconn)
+	nc := pb.NewNameNodeClient(nconn)
 
-	for _, jug := range (Jugadas) {
+	for _, jug := range Jugadas {
 
 		jugadasArray := []*pb.Jugada{jug.Jugada}
-		jugJuegoArray := []*pb.JugadasJuego {
+		jugJuegoArray := []*pb.JugadasJuego{
 			{
 				NumJuego: JuegoActual,
-				Jugadas: jugadasArray,
+				Jugadas:  jugadasArray,
 			},
 		}
 
 		SolicitudDeRegistro := &pb.SolicitudRegistrarJugadas{
 			JugadasJugador: &pb.JugadasJugador{
-				NumJugador: jug.NumJugador,
+				NumJugador:   jug.NumJugador,
 				JugadasJuego: jugJuegoArray,
 			},
 		}
 
 		r, err := nc.RegistrarJugadas(context.Background(), SolicitudDeRegistro)
 
-		if (err != nil) {
+		if err != nil {
 			fmt.Printf("Error al solicitar registrar jugadas del jugador: %v - err: %v\n", jug.NumJugador.Val, err)
 			continue
 		}
 		fmt.Printf("Se registró la jugada del Jugador: %v\n", r.NumJugador.Val)
 	}
-	fmt.Printf("Se registraron las jugadas del Juego: %v - Ronda: %v\n", JuegoActual, CurrentRonda)
+	fmt.Printf("Se registraron las jugadas del Juego: %v - Ronda: %v\n", JuegoActual, CurrentRonda+1)
 
 }
 
@@ -1307,7 +1318,7 @@ func LiderService() {
 	s := grpc.NewServer()
 	pb.RegisterLiderServer(s, &server{})
 	log.Printf("Juego Inicializado: escuchando en %v\n", lis.Addr())
-	waitc<- 0	
+	waitc <- 0
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
