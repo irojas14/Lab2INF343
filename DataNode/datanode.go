@@ -39,6 +39,8 @@ func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrar
 	fmt.Println("Solicitud de Registro de Jugadas")
 	// Crear nuevo archivo de jugador, si es nuevo
 
+	fmt.Printf("Almacenar Jugada del Jugador %v del Juego %v\n", in.JugadasJugador.NumJugador.Val, in.JugadasJugador.JugadasJuego[0].NumJuego)
+
 	jugadorStr := strconv.FormatInt(int64(in.JugadasJugador.NumJugador.Val), 10)
 	etapaStr := strconv.FormatInt(int64(in.JugadasJugador.JugadasJuego[0].NumJuego), 10)
 

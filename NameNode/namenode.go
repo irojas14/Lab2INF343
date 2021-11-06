@@ -139,28 +139,47 @@ func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJu
 func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) error {
 	jugador := jugadasEnv.NumJugador.Val
 	juego := jugadasEnv.JugadasJuego[0].NumJuego
+	
+	jugadorStr := strconv.FormatInt(int64(jugador), 10)
+	rondaStr := strconv.FormatInt(int64(juego), 10)
 
-	file, err := os.OpenFile("NameNode/" + nameNodeFile, os.O_APPEND|os.O_WRONLY, 0777)
+	var linea string = "Jugador " + jugadorStr + " Etapa " + rondaStr + " " + selDataNodeAddrs + "\n"
+
+	file, err := os.Open("NameNode/" + nameNodeFile)
 
 	if err != nil {
 		fmt.Println(err)
 		return err
 	}
-	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()+"\n"
+		fmt.Printf("Line: %v - Linea: %v - iguales?: %v\n", line, linea, line == linea)
 	
-	//Jugador 1 Ronda 1 10.0.1.10
+		if (linea == line) {
+			fmt.Print("El archivo y el registro ya existe")
+			file.Close()
+			return nil
+		}
+	}
+	file.Close()
+	
+	file2, err2 := os.OpenFile("NameNode/" + nameNodeFile, os.O_APPEND|os.O_WRONLY, 0777)
 
-	jugadorStr := strconv.FormatInt(int64(jugador), 10)
-	rondaStr := strconv.FormatInt(int64(juego), 10)
-
-	var linea string = "Jugador " + jugadorStr + " Etapa " + rondaStr + " " + selDataNodeAddrs + "\n"
+	if err != nil {
+		fmt.Println(err)
+		return err2
+	}
+	defer file2.Close()
+	
 	fmt.Printf("Linea registro: %v\n", linea)
 	
-	_, err2 := file.WriteString(linea)
+	_, err3 := file2.WriteString(linea)
 
-	if (err2 != nil ) {
-		log.Fatalf("Error al escribir registro: %v\n", err2)
-		return err2
+	if (err3 != nil ) {
+		log.Fatalf("Error al escribir registro: %v\n", err3)
+		return err3
 	}
 	return nil
 }

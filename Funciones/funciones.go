@@ -47,7 +47,7 @@ func CrearArchivoTxt(NombreDelArchivo string) {
 
 func InsertarJugadasDelJugador(NombreDelArchivo string, JugadasDelJugador []int32) {
 	// Open file using READ & WRITE permission.
-	var file, err = os.OpenFile(NombreDelArchivo, os.O_RDWR, 0644)
+	var file, err = os.OpenFile(NombreDelArchivo, os.O_APPEND|os.O_WRONLY, 0644)
 	if isError(err) {
 		return
 	}
@@ -56,7 +56,8 @@ func InsertarJugadasDelJugador(NombreDelArchivo string, JugadasDelJugador []int3
 	for _, jugada := range JugadasDelJugador {
 		// Hacer algo
 		// Write some text line-by-line to file.
-		_, err = file.WriteString(FormatInt32(jugada))
+		var linea string = FormatInt32(jugada)+"\n"
+		_, err = file.WriteString(linea)
 		if isError(err) {
 			return
 		}
