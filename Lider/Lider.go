@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"net"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 // Direcciones
 
 const (
-	MaxPlayers      = 4
+	MaxPlayers      = 8
 	nameNodeAddress = "dist150.inf.santiago.usm.cl:50054"
 	nPort = ":50054"
 	pozoAddress     = "dist151.inf.santiago.usm.cl:50051"
@@ -592,6 +593,80 @@ func ProcesamientoConsola(liderInput string) {
 
 func ObtenerJugadas() {
 
+	var numJugadorStr string
+
+	// Preguntamos por un Numero de Jugador
+	fmt.Printf("Ingrese Numero Jugador o 'E' para Volver + 'ENTER': ")
+	fmt.Scanln(&numJugadorStr)
+
+	// Si nos entrega "E", volvemos
+	if (numJugadorStr == "e" || numJugadorStr == "E") {
+		return
+	}
+
+	// Definimos si vamos a usar dirección remota o local
+	dialAddrs := nameNodeAddress
+	if len(os.Args) == 2 {
+		dialAddrs = "localhost" + nPort
+	}
+
+	fmt.Printf("Dial Addres: %v\n", dialAddrs)
+
+	// Creamos una conexión, se guarda en conn
+	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %v\n", err)
+	}
+	defer conn.Close()
+	
+	// Creamos el NameNodeClient, para hacer solicitudes al NameNode, que está escuchando (idealmente)
+	nc := pb.NewNameNodeClient(conn)
+
+	// Convertimos el input entregado, que es un string, a int64 y luego a int32
+	numJugador64, err2 := strconv.ParseInt(numJugadorStr, 10, 32)
+	if (err2 != nil) {
+		log.Fatalf("Falló la Conversión al querer Obtener las jugadas del Jugador %v: err: %v\n", numJugadorStr, err2)
+		return
+	}
+	numJugador32 := int32(numJugador64)
+	
+	// Realizamos el Procedimiento Remoto "DevolverJugadas" al NameNode
+	// Recibimos un contexto y una SolicitudDevolverJugadasNameNode, que es básicamente un Numero de Jugador
+	// en la variables r se almacenará nuestra respuesta
+	
+	//r : RespuestaDevolverJugadasNameNode
+		// r.JugadasJugador
+			// NumJugador
+			// Arreglo de JugadasJuego
+				// una JugadaJuego es:
+					// NumJuego
+					// Arreglo de Jugadas
+						// Jugadas.Val => es el valor int32 de la jugada
+
+	r, err3 := nc.DevolverJugadas(context.Background(), 
+	&pb.SolicitudDevolverJugadasNameNode{
+		NumJugador: &pb.JugadorId{
+			Val: numJugador32,
+		},
+	})
+
+	if (err3 != nil) {
+		log.Fatalf("Error Al Consultar las Jugadas del Jugador %v: err: %v\n", numJugadorStr, err3)
+		return 
+	}
+
+	// Imprimimos la respuesta "r"
+	// Recorremos el arreglo de JugadasJuego
+		// Imprimimos el NumJuego; y
+		// Recorremos el arreglo de Jugadas e imprimimos su campo Val
+	fmt.Printf("MOSTRANDO Jugadas del JUGADOR %v\n", r.JugadasJugador.NumJugador.Val)
+	for _, jugadaJuego := range r.JugadasJugador.JugadasJuego {
+		fmt.Printf("JUEGO: %v\n", jugadaJuego.NumJuego)
+		
+		for i, jugada := range jugadaJuego.Jugadas {
+			fmt.Printf("[%v]: %v\n",i, jugada.Val)
+		}
+	}
 }
 
 func SiguienteEvento() {
