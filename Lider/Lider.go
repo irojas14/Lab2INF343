@@ -695,7 +695,7 @@ func JuegoLucesWaitForResponses() {
 			PARA DEBUGEAR, SE DEJA EL RANDOM DEL  LIDER EN NUMBEROS MAS ALTOS!!!
 		liderVal := funcs.RandomInRange(6, 10)
 	*/
-	ValorLider = funcs.RandomInRange(11, 14)
+	ValorLider = funcs.RandomInRange(1, 10)
 	fmt.Printf("VALOR DEL LÍDER: %v\n", ValorLider)
 	// Recorremos las respuestas colocadas en el arreglo global "Jugadas", definiendo el estado correspondiente
 	// Si el valor del jugador es menor que el del lider, entonces vive, si no, muere
