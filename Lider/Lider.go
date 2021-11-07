@@ -21,7 +21,7 @@ import (
 // Direcciones
 
 const (
-	MaxPlayers      = 4
+	MaxPlayers      = 16
 	nameNodeAddress = "dist150.inf.santiago.usm.cl:50054"
 	nPort           = ":50054"
 	pozoAddress     = "dist151.inf.santiago.usm.cl:50051"
@@ -187,37 +187,6 @@ func (s *server) Unirse(in *pb.SolicitudUnirse, stream pb.Lider_UnirseServer) er
 
 	}
 	return nil
-	/*
-		else if jugNum.GetVal() == MaxPlayers {
-			res := &pb.RespuestaUnirse{
-				MsgTipo:    pb.RespuestaUnirse_Comenzar,
-				NumJugador: jugNum,
-				NumJuego:   pb.JUEGO_Luces,
-				NumRonda:   &pb.RondaId{Val: 0},
-			}
-			if err := stream.Send(res); err != nil {
-				return err
-			}
-
-			JugadoresMux.Lock()
-			Jugadores = append(Jugadores, jugNum.Val)
-			JugadoresMux.Unlock()
-
-			CurrentAlivePlayers = res.GetNumJugador().GetVal()
-
-			fmt.Printf("Se unieron los %v/%v Jugadores. Esperando señal de inicio del Líder para comenzar\n", CurrentAlivePlayers, MaxPlayers)
-
-			<-gameReadyChan
-
-			fmt.Println()
-			fmt.Println()
-
-			CambiarEtapa(pb.JUEGO_Luces)
-
-			fmt.Printf("Comenzando ! Jugadores Totales: %v\n", MaxPlayers)
-			fmt.Println("JUEGO: Luz Roja, Luz Verde - Ronda: 1")
-		}
-	*/
 }
 
 // ENVIAR JUGADA-------------------------------------------------------------------------------------------------------------------
