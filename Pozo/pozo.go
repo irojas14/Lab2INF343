@@ -13,7 +13,7 @@ import (
 const (
 	port    = ":50051"
 	local   = "localhost" + port
-	address = "dist151.inf.santiago.usm.cl" + port
+	address = "dist151.inf.santiago.usm.cl:50051"
 )
 
 var MontoAcumulado int32 = 0
@@ -23,8 +23,8 @@ type server struct {
 }
 
 func (s *server) VerMonto(ctx context.Context, in *pb.SolicitudVerMonto) (*pb.RespuestaVerMonto, error) {
-    log.Println("Sirviendo Solicitud de Ver Monto")
-    return &pb.RespuestaVerMonto{ Monto: float32(MontoAcumulado) }, nil
+	log.Println("Sirviendo Solicitud de Ver Monto")
+	return &pb.RespuestaVerMonto{Monto: float32(MontoAcumulado)}, nil
 }
 
 func main() {
@@ -42,8 +42,8 @@ func main() {
 
 	pb.RegisterPozoServer(s, &server{})
 	log.Printf("Pozo escuchando en %v", lis.Addr())
-	
-    if err := s.Serve(lis); err != nil {
+
+	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
 }

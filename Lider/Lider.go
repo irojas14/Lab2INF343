@@ -438,7 +438,7 @@ func VerMonto() error {
 		dialAddrs = "localhost:50051"
 	}
 
-	fmt.Println("CONTESTANDO SOLICITUD DE VER MONTO ACUMULADO al POZO")
+	fmt.Printf("CONTESTANDO SOLICITUD de VER MONTO ACUMULADO al POZO. Conectando: %v\n", dialAddrs)
 
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
