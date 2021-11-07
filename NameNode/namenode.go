@@ -26,44 +26,42 @@ const (
 )
 
 const (
-	dnPort = ":50055"
-	dn1Addrs = "dist149.inf.santiago.usm.cl" + dnPort
-	dn2Addrs = "dist151.inf.santiago.usm.cl" + dnPort
-	dn3Addrs = "dist152.inf.santiago.usm.cl" + dnPort
+	dn1Addrs = "dist149.inf.santiago.usm.cl" + ":50057"
+	dn2Addrs = "dist151.inf.santiago.usm.cl" + ":50058"
+	dn3Addrs = "dist152.inf.santiago.usm.cl" + ":50059"
 )
 
 const (
 	dnLocal = "localhost"
-	local1 = dnLocal + ":50057"
-	local2 = dnLocal + ":50058"
-	local3 = dnLocal + ":50059"
+	local1  = dnLocal + ":50057"
+	local2  = dnLocal + ":50058"
+	local3  = dnLocal + ":50059"
 )
 
 var (
-	RemoteAddrs [3]string = [3]string{dn1Addrs, dn2Addrs, dn3Addrs} 
-	localAddrs [3]string = [3]string{local1, local2, local3}
-	curAddrs [3]string
+	RemoteAddrs [3]string = [3]string{dn1Addrs, dn2Addrs, dn3Addrs}
+	localAddrs  [3]string = [3]string{local1, local2, local3}
+	curAddrs    [3]string
 )
 
 var DataNodeAddresses [3]string = [3]string{dn1Addrs, dn2Addrs, dn3Addrs}
-
 
 type server struct {
 	pb.UnimplementedNameNodeServer
 }
 
 func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrarJugadas) (*pb.RespuestaRegistrarJugadas, error) {
-    log.Println("Sirviendo Solicitud de Registrar Jugada")
+	log.Println("Sirviendo Solicitud de Registrar Jugada")
 
 	// Elegir un Datanode y guarda la info
 	// creado un DataNodeClient y usando la RPC DataNode.RegistrarJugadas
 
 	// Elegimos un DataNode al Azar
-	selDataNode := curAddrs[2];
+	selDataNode := curAddrs[2]
 	election := funcs.RandomInRange(1, 3)
-	if (election == 1) {
+	if election == 1 {
 		selDataNode = curAddrs[0]
-	} else if (election == 2) {
+	} else if election == 2 {
 		selDataNode = curAddrs[1]
 	}
 
@@ -73,7 +71,7 @@ func (s *server) RegistrarJugadas(ctx context.Context, in *pb.SolicitudRegistrar
 	// Almacenar Informacion al DataNode Seleccionado
 	AlmacenamientoDataNode(in.JugadasJugador, selDataNode)
 
-    return &pb.RespuestaRegistrarJugadas{ NumJugador: &pb.JugadorId{Val: in.JugadasJugador.NumJugador.Val} }, nil
+	return &pb.RespuestaRegistrarJugadas{NumJugador: &pb.JugadorId{Val: in.JugadasJugador.NumJugador.Val}}, nil
 }
 
 func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJugadasNameNode) (*pb.RespuestaDevolverJugadas, error) {
@@ -86,11 +84,11 @@ func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJu
 		toma un numero de jugador y se preparar y solicitar toda la info de tal jugador
 		Ocupando el registro para buscarla en los respectivos DataNodes.
 	*/
-	jj, err := LeerRegistroDeJugadas(numJugador);
+	jj, err := LeerRegistroDeJugadas(numJugador)
 
 	if err == nil {
 		fmt.Print("Error en linea 92")
-		return nil, err;
+		return nil, err
 	}
 	return &pb.RespuestaDevolverJugadas{JugadasJugador: jj}, nil
 }
@@ -100,7 +98,7 @@ func (s *server) DevolverJugadas(ctx context.Context, in *pb.SolicitudDevolverJu
 func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) error {
 	jugador := jugadasEnv.NumJugador.Val
 	juego := jugadasEnv.JugadasJuego[0].NumJuego
-	
+
 	jugadorStr := strconv.FormatInt(int64(jugador), 10)
 	rondaStr := strconv.FormatInt(int64(juego), 10)
 
@@ -115,29 +113,29 @@ func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) err
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		line := scanner.Text()+"\n"
-	
-		if (linea == line) {
+		line := scanner.Text() + "\n"
+
+		if linea == line {
 			fmt.Print("El archivo y el registro ya existe")
 			file.Close()
 			return nil
 		}
 	}
 	file.Close()
-	
-	file2, err2 := os.OpenFile("NameNode/" + nameNodeFile, os.O_APPEND|os.O_WRONLY, 0777)
+
+	file2, err2 := os.OpenFile("NameNode/"+nameNodeFile, os.O_APPEND|os.O_WRONLY, 0777)
 
 	if err != nil {
 		fmt.Println(err)
 		return err2
 	}
 	defer file2.Close()
-	
+
 	fmt.Printf("Linea registro: %v\n", linea)
-	
+
 	_, err3 := file2.WriteString(linea)
 
-	if (err3 != nil ) {
+	if err3 != nil {
 		log.Fatalf("Error al escribir registro: %v\n", err3)
 		return err3
 	}
@@ -145,9 +143,9 @@ func AgregarRegistro(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) err
 }
 
 func AlmacenamientoDataNode(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs string) error {
-	
+
 	fmt.Printf("Conectándose a Datanode - Addr: %s\n", selDataNodeAddrs)
-	
+
 	// Set up a connection to the server.
 	conn, err := grpc.Dial(selDataNodeAddrs, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
@@ -164,7 +162,7 @@ func AlmacenamientoDataNode(jugadasEnv *pb.JugadasJugador, selDataNodeAddrs stri
 
 	fmt.Println("Datanode Respondió")
 
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("Error al registrar jugadas en el DataNode %v: err: %v\n", selDataNodeAddrs, err)
 		return err
 	}
@@ -189,13 +187,13 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 
 	// Creamos una respuesta vacía, pero le agregamos el Numero del Jugador
 	// DevolverJugadas devuelve una RespuestaDevolverJugadas
-		// JugadasJugador
-			// Numero del Jugador (tipo pb.JugadorId -> Val: int32 que es en número del jugador)
-			// Arreglo de JugadasJuego
-				// JugadaJuego es:
-					// Numero de Juego (tipo pb.JUEGO)
-					// Arreglo de Jugadas (tipo pb.Jugada -> Val: int32 que es la jugada)
-	
+	// JugadasJugador
+	// Numero del Jugador (tipo pb.JugadorId -> Val: int32 que es en número del jugador)
+	// Arreglo de JugadasJuego
+	// JugadaJuego es:
+	// Numero de Juego (tipo pb.JUEGO)
+	// Arreglo de Jugadas (tipo pb.Jugada -> Val: int32 que es la jugada)
+
 	res := &pb.JugadasJugador{}
 	res.NumJugador = &pb.JugadorId{Val: numjugador}
 
@@ -206,7 +204,7 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 					Ejemplo
 					"localhost:50059":["1", "2", ...,"x"]
 					"localhost:50058":["1", "3", ..., "y"]
-		
+
 		Recorremos el archivo de registro buscando las lineas que contengan el jugador que buscamos, es decir "Jugador_NumeroJugador".
 		Para hacer eso hacemos Split(line, " "), quedando: items[0]: Jugador_x, items[1]: Etapa_y, items[2]: ip_datanode.
 		Si la linea corresponde al jugador que buscamos, guardamos como llave su ip_datanode y agregamos el "y" de "Etapa_y" al
@@ -218,11 +216,11 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 		line := scanner.Text()
 		items := strings.Split(line, " ")
 		//split: items[0] = Jugador_numero - items[1] = Etapa_numero - items[2] = ip_datanode
-		
-		if items[0] == "Jugador_" + funcs.FormatInt32(numjugador) {
+
+		if items[0] == "Jugador_"+funcs.FormatInt32(numjugador) {
 			fmt.Println(items)
 			_, ok := dirEtapasMap[items[2]]
-			if (ok) {
+			if ok {
 				dirEtapasMap[items[2]] = append(dirEtapasMap[items[2]], strings.Split(items[1], "_")[1])
 			} else {
 				dirEtapasMap[items[2]] = []string{strings.Split(items[1], "_")[1]}
@@ -238,62 +236,60 @@ func LeerRegistroDeJugadas(numjugador int32) (*pb.JugadasJugador, error) {
 		conn, err := grpc.Dial(dialDir, grpc.WithInsecure(), grpc.WithBlock())
 		if err != nil {
 			log.Fatalf("did not connect: %v", err)
-			return nil, err;
+			return nil, err
 		}
 		defer conn.Close()
 
 		// Creamos el DataNodeClient, que deberían estar escuchando
 		dc := pb.NewDataNodeClient(conn)
-	
+
 		// Realizamos el Procedimiento Remoto
-			// Recibe un pb.SolicitudDevolverJugadasDataNode
-				// NumJugador -> tipo pb.JugadorId -> Val: int32 -> número del jugador
-				// Etapas: Arreglo de strings, que contiene los números de las etapas (["1", "2", ... "x"])
-		r, err := dc.DevolverJugadas(context.Background(), 
-		&pb.SolicitudDevolverJugadasDataNode{
-			NumJugador: &pb.JugadorId{Val: numjugador},
-			Etapas: etapas,
-		})
+		// Recibe un pb.SolicitudDevolverJugadasDataNode
+		// NumJugador -> tipo pb.JugadorId -> Val: int32 -> número del jugador
+		// Etapas: Arreglo de strings, que contiene los números de las etapas (["1", "2", ... "x"])
+		r, err := dc.DevolverJugadas(context.Background(),
+			&pb.SolicitudDevolverJugadasDataNode{
+				NumJugador: &pb.JugadorId{Val: numjugador},
+				Etapas:     etapas,
+			})
 
 		if err != nil {
 			log.Fatalf("Error: %v\n", err)
-			return nil, err;
+			return nil, err
 		}
 		// Nos devuelve la respuesta "r" que es tipo pb.RespuestaDevolverJugadas
 		// r-> JugadasJuego
-			// NumJugador: Numero del Jugador
-			// Arreglo de pb.JugadasJuego
-				// NumJuego, tipo pb.JUEGO
-				// Arreglo Jugadas -> tipo pb.Jugada -> Val:int32 que corresponde a la jugada
-		
+		// NumJugador: Numero del Jugador
+		// Arreglo de pb.JugadasJuego
+		// NumJuego, tipo pb.JUEGO
+		// Arreglo Jugadas -> tipo pb.Jugada -> Val:int32 que corresponde a la jugada
+
 		// a la respuesta plantilla "res", le agregamos el r.JugadasJugador.JugadasJuego recibido
 		res.JugadasJuego = append(res.JugadasJuego, r.JugadasJugador.JugadasJuego...)
 	}
 	//r.JugadasJugador.NumJugador.GetVal()
 	//r.JugadasJugador.JugadasJuego[0].NumJuego
 	//r.JugadasJugador.JugadasJuego[0].Jugadas[i].Val
-	
+
 	// Devolvemos el JugadasJugador obtenido
 	// Volvemos a "DevolverJugadas", donde a un objeto pb.RespuestaDevolverJugadas, le pasaremos las JugadasJugador
 	return res, nil
 }
 
 func main() {
-	
+
 	// Creamos el archivo de registro
 	funcs.CrearArchivoTxt("NameNode/" + nameNodeFile)
-
 
 	// Definimos nuestras direcciones: remotas o locales
 	lisAddrs := address
 	curAddrs = RemoteAddrs
-	fmt.Println("Comenzando El NameNode")	
+	fmt.Println("Comenzando El NameNode")
 	if len(os.Args) == 2 {
 		curAddrs = localAddrs
 		lisAddrs = local
 	}
 
-	
 	// Creamos el servidor que escuchara
 	lis, err := net.Listen("tcp", lisAddrs)
 	if err != nil {
