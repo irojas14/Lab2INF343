@@ -1,14 +1,28 @@
+ifdef OS
+	RM = del /Q
+	FixPath = $(subst /,\,$1)
+else
+	ifeq ($(shell uname), Linux)
+		RM = rm -f
+		FixPath = $1
+	endif
+endif
+
 lider: 
 	go run Lider/Lider.go
 jugadorH: 
 	go run Jugador/jugador.go h
 jugadorB: 
 	go run Jugador/jugador.go
-namenode1:
-	go run NameNode/namenode.go 1
-namenode2:
-	go run NameNode/namenode.go 1
-namenode3:
-	go run NameNode/namenode.go 1
-datanode:
-	go run DataNode/datanode.go
+datanode1:
+	go run DataNode/datanode.go 1
+datanode2:
+	go run DataNode/datanode.go 2
+datanode3:
+	go run DataNode/datanode.go 3
+namenode:
+	go run NameNode/namenode.go
+pozo:
+	go run Pozo/pozo.go
+clean:
+	go run $(RM) *.txt
