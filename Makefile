@@ -25,4 +25,4 @@ namenode:
 pozo:
 	go run Pozo/pozo.go
 clean:
-	rm -- **/*.o
+	find . -type f -name '*.txt' -delete
