@@ -72,15 +72,23 @@ func main() {
 
 	dialAddrs = liderAddress
 	if len(os.Args) == 2 {
-		dialAddrs = local
-	}
-
-	if os.Args[1] == "1" {
-		tipo = TipoJugador_Humano
+		if os.Args[1] == "h" {
+			dialAddrs = liderAddress
+			tipo = TipoJugador_Humano
+		} else {
+			dialAddrs = local
+			if os.Args[1] == "1" {
+				tipo = TipoJugador_Humano
+			} else {
+				tipo = TipoJugador_Bot
+			}
+		}
 
 	} else {
 		tipo = TipoJugador_Bot
 	}
+
+	//fmt.Printf("Dial Addres: %v - Tipo: %v\n", dialAddrs, tipo)
 
 	if tipo == TipoJugador_Humano {
 		go Update()
