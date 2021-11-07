@@ -530,17 +530,13 @@ func ShowConsola() {
 		fmt.Println("Iniciar SIGUIENTE EVENTO: PRESIONAR 'S' + 'ENTER'")
 
 	}
-	fmt.Println("Ver MONTO ACUMULADO: PRESIONAR 'M' + 'ENTER'")
 	fmt.Println("Ver JUGADAS de JUGADOR: PRESIONAR 'J' + 'ENTER'")
 	fmt.Println("Terminar Servicio: PRESIONAR 'E' + 'ENTER'")
 }
 
 func ProcesamientoConsola(liderInput string) {
-
-	if liderInput == "m" || liderInput == "M" {
-		VerMonto()
-
-	} else if liderInput == "s" || liderInput == "S" {
+	
+	if liderInput == "s" || liderInput == "S" {
 		if !juegoIniciado {
 			IniciarJuego()
 
