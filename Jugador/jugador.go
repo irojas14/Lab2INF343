@@ -630,14 +630,10 @@ func ProcesamientoConsola(input string) {
 }
 
 func VerMonto() {
-	dialAddrs := liderAddress
-	if len(os.Args) == 2 {
-		dialAddrs = local
-	}
-
-	fmt.Println("CONSULTANDO MONTO ACUMULADO")
-
 	// Set up a connection to the server.
+
+	fmt.Printf("CONSULTANDO El MONTO ACUMULADO al LIDER. Conectando a: %v\n", dialAddrs)
+
 	conn, err := grpc.Dial(dialAddrs, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v\n", err)

@@ -535,7 +535,7 @@ func ShowConsola() {
 }
 
 func ProcesamientoConsola(liderInput string) {
-	
+
 	if liderInput == "s" || liderInput == "S" {
 		if !juegoIniciado {
 			IniciarJuego()
