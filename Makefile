@@ -25,4 +25,4 @@ namenode:
 pozo:
 	go run Pozo/pozo.go
 clean:
-	$(RM) *.txt
+	rm -- **/*.o
